@@ -1,0 +1,25 @@
+# Node / React Native / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# Xcode / iOS / watchOS
+ios/Pods/
+ios/build/
+ios/DerivedData/
+*.xcuserstate
+xcuserdata/
+*.ipa
+
+# Maestro
+.maestro/tests/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
