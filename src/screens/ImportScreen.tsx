@@ -1,7 +1,9 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { showAlert } from '../ui/dialogs';
 
 import { listWorkouts, saveWorkout } from '../data/workoutRepository';
 import { pushWorkoutsToWatch } from '../data/watchSync';
@@ -46,7 +48,7 @@ export default function ImportScreen({ navigation }: Props) {
     await saveWorkout(result.workout);
     const all = await listWorkouts();
     pushWorkoutsToWatch(all.map((w) => w.workout));
-    Alert.alert(t('import.success', { name: result.workout.name }));
+    showAlert(t('import.success', { name: result.workout.name }));
     navigation.goBack();
   };
 

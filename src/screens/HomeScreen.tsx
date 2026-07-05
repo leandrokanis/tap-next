@@ -2,7 +2,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { showAlert } from '../ui/dialogs';
 
 import { clearSnapshot, loadSnapshot } from '../data/activeSession';
 import { deleteWorkout, listWorkouts, StoredWorkout } from '../data/workoutRepository';
@@ -47,7 +49,7 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const handleDelete = (stored: StoredWorkout) => {
-    Alert.alert(t('home.deleteWorkoutTitle'), t('home.deleteWorkoutBody', { name: stored.workout.name }), [
+    showAlert(t('home.deleteWorkoutTitle'), t('home.deleteWorkoutBody', { name: stored.workout.name }), [
       { text: t('history.cancel'), style: 'cancel' },
       {
         text: t('history.delete'),

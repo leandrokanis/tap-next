@@ -1,7 +1,9 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+
+import { showAlert } from '../ui/dialogs';
 
 import { deleteSession, getSession, updateSessionSet } from '../data/sessionRepository';
 import { SessionRecord } from '../domain/session';
@@ -33,7 +35,7 @@ export default function HistoryDetailScreen({ route, navigation }: Props) {
   );
 
   const handleDelete = () => {
-    Alert.alert(t('history.deleteTitle'), t('history.deleteBody'), [
+    showAlert(t('history.deleteTitle'), t('history.deleteBody'), [
       { text: t('history.cancel'), style: 'cancel' },
       {
         text: t('history.delete'),

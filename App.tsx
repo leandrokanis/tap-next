@@ -2,7 +2,6 @@ import './src/i18n';
 
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,21 +16,10 @@ import HomeScreen from './src/screens/HomeScreen';
 import ImportScreen from './src/screens/ImportScreen';
 import SessionScreen from './src/screens/SessionScreen';
 import { SessionProvider } from './src/session/SessionProvider';
-import { prepareAudio, requestNotificationPermission } from './src/services/alerts';
+import { initNotifications, prepareAudio } from './src/services/alerts';
 import { colors } from './src/ui/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-// Alerts scheduled for phase ends must not pop while the app is foregrounded
-// — the in-app sound/haptic covers that case.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: false,
-    shouldShowList: false,
-  }),
-});
 
 const theme = {
   ...DarkTheme,
@@ -50,7 +38,7 @@ export default function App() {
 
   useEffect(() => {
     prepareAudio();
-    requestNotificationPermission();
+    initNotifications();
     // Watch → iPhone: sessions arrive whenever the devices reconnect
     // (idempotent insert, ADR 0005). iPhone → Watch: seed current workouts.
     const unsubscribe = subscribeToWatchSessions((session) => {

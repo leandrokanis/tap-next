@@ -1,7 +1,9 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { showAlert } from '../ui/dialogs';
 
 import * as engine from '../engine/engine';
 import { RootStackParamList } from '../navigation/types';
@@ -26,7 +28,7 @@ export default function SessionScreen({ navigation }: Props) {
     const sets = state.completedSets.length;
     const minutes = Math.max(1, Math.round(engine.sessionElapsed(state, now) / 60));
     session.saveCompleted().then(() => {
-      Alert.alert(t('session.completedTitle'), t('session.completedBody', { sets, minutes }), [
+      showAlert(t('session.completedTitle'), t('session.completedBody', { sets, minutes }), [
         { text: t('session.ok'), onPress: () => navigation.popToTop() },
       ]);
     });
@@ -48,7 +50,7 @@ export default function SessionScreen({ navigation }: Props) {
   const lastSet = state.completedSets[state.completedSets.length - 1];
 
   const handleFinish = () => {
-    Alert.alert(
+    showAlert(
       t('session.finishTitle'),
       t('session.finishBody', { done: doneSets, total: totalSets }),
       [

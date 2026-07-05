@@ -1,15 +1,44 @@
 import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
-import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 /**
  * Phase-end signals (RF-02): sound + haptic in the foreground, a local
  * notification scheduled for the exact phase boundary when backgrounded.
  * Every call is failure-tolerant — a broken speaker must never break the
- * session.
+ * session. expo-notifications has no web support, so it is loaded lazily
+ * and only on native.
  */
 
+type NotificationsModule = typeof import('expo-notifications');
+
 let player: AudioPlayer | null = null;
+
+function notifications(): NotificationsModule | null {
+  if (Platform.OS === 'web') return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-notifications') as NotificationsModule;
+  } catch {
+    return null;
+  }
+}
+
+/** Foreground phase-end alerts come from in-app sound/haptics; scheduled
+ * notifications must stay silent while the app is visible. */
+export function initNotifications(): void {
+  const module = notifications();
+  if (!module) return;
+  module.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: false,
+      shouldShowList: false,
+    }),
+  });
+  module.requestPermissionsAsync().catch(() => {});
+}
 
 export async function prepareAudio(): Promise<void> {
   try {
@@ -37,25 +66,18 @@ export function signalPhaseEnd(): void {
   }
 }
 
-export async function requestNotificationPermission(): Promise<void> {
-  try {
-    await Notifications.requestPermissionsAsync();
-  } catch {
-    // user said no — background alerts simply won't fire
-  }
-}
-
 export async function schedulePhaseEndNotification(
   secondsFromNow: number,
   title: string,
   body: string,
 ): Promise<string | null> {
-  if (secondsFromNow < 1) return null;
+  const module = notifications();
+  if (!module || secondsFromNow < 1) return null;
   try {
-    return await Notifications.scheduleNotificationAsync({
+    return await module.scheduleNotificationAsync({
       content: { title, body, sound: true },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        type: module.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: Math.ceil(secondsFromNow),
         repeats: false,
       },
@@ -67,7 +89,7 @@ export async function schedulePhaseEndNotification(
 
 export async function cancelScheduledNotifications(): Promise<void> {
   try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await notifications()?.cancelAllScheduledNotificationsAsync();
   } catch {
     // nothing scheduled
   }
