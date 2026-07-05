@@ -37,16 +37,21 @@ are immutable — supersede, don't edit.
 
 ## Development setup
 
-Implementation has not landed yet; this section will grow with it.
-Planned toolchain:
-
-- **iPhone app**: Node.js LTS, `npm install`, `npx expo run:ios` (requires
-  Xcode; the generated `ios/` directory is committed — see
-  [ADR 0001](docs/adr/0001-react-native-iphone-swiftui-watch.md)).
-- **Watch app**: open `ios/` in Xcode, run the `TapNextWatch` scheme.
-- **Unit tests**: `npm test` (Jest) · `xcodebuild test` (XCTest).
-- **E2E**: [Maestro](https://maestro.mobile.dev) flows in `e2e/flows/`,
-  against the iOS simulator.
+- **Requirements**: Node.js 22+. macOS + Xcode 16 only for running the apps
+  and E2E (everything else works on Linux).
+- **Install**: `npm install`
+- **Typecheck**: `npm run typecheck`
+- **TS unit tests** (engine, domain, data): `npm test`
+- **Swift engine tests** (same shared fixtures, no Xcode needed):
+  `swift test --package-path watch/TapNextEngine`
+- **iPhone app**: `npx expo run:ios` (macOS; generates `ios/` on first run —
+  see [ADR 0001](docs/adr/0001-react-native-iphone-swiftui-watch.md)).
+- **Watch app**: one-time Xcode target setup in
+  [docs/WATCH_SETUP.md](docs/WATCH_SETUP.md), then run the `TapNextWatch`
+  scheme.
+- **E2E**: [Maestro](https://maestro.mobile.dev) flows in `e2e/flows/` —
+  `npm run e2e` with the app installed on a booted simulator (see
+  [e2e/README.md](e2e/README.md)).
 
 ## Pull requests
 

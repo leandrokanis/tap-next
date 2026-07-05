@@ -1,0 +1,22 @@
+# Funcionalidade: Importar treino
+#   Cenário: colar um JSON válido cria o treino na lista
+#     Dado que abri o Tap Next pela primeira vez
+#     Quando colo o JSON de exemplo e toco em Importar
+#     Então "Pernas A" aparece na lista de treinos
+appId: com.leandrokanis.tapnext
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "home-screen"
+- tapOn:
+    id: "go-import"
+- assertVisible:
+    id: "import-screen"
+- tapOn:
+    id: "load-sample"
+- tapOn:
+    id: "do-import"
+- tapOn: "OK"
+- assertVisible:
+    id: "workout-Pernas A"

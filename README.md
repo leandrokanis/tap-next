@@ -7,8 +7,9 @@ sessions. Tap Next guides you through a workout exercise by exercise, timing
 every phase, sounding a signal when it's time to move on — and asking for just
 one tap when it isn't.
 
-> **Status:** 🚧 pre-development. The product and technical spec are complete
-> ([PRD](docs/PRD.md) · [SPEC](docs/SPEC.md)); implementation has not started.
+> **Status:** 🛠 v1 implemented — TS + Swift engines (shared fixtures), iPhone
+> app, watchOS app sources, Maestro flows and CI. Remaining manual step: the
+> one-time Xcode watch-target setup ([docs/WATCH_SETUP.md](docs/WATCH_SETUP.md)).
 
 ## What it does
 
@@ -103,10 +104,19 @@ tap-next/
 
 ## Getting started
 
-Implementation hasn't landed yet. Once it does, this section will cover:
-Node.js + Xcode prerequisites, `npm install`, `npx expo run:ios`, opening the
-Watch target, and running the test suites. Track progress in the
-[PRD roadmap](docs/PRD.md#8-escopo).
+```bash
+npm install
+
+npm run typecheck                              # TypeScript
+npm test                                       # Jest — engine, domain, data
+swift test --package-path watch/TapNextEngine  # Swift engine, same fixtures
+
+npx expo run:ios                               # iPhone app (macOS + Xcode)
+npm run e2e                                    # Maestro flows (see e2e/README.md)
+```
+
+The watch app needs a one-time Xcode target setup:
+[docs/WATCH_SETUP.md](docs/WATCH_SETUP.md).
 
 ## Documentation
 

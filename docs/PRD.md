@@ -132,17 +132,19 @@ histórico sai como JSON, e nada depende de servidor.
 
 ### v1 (este PRD)
 
-- [ ] Motor de sessão TS + fixtures compartilhadas
-- [ ] Domínio: schema do treino + validação com erros posicionados
-- [ ] iPhone: lista de treinos, importar (colar JSON), exportar
-- [ ] iPhone: tela de sessão (fases, Próximo, pausa, registro no descanso)
-- [ ] iPhone: histórico (lista, detalhe, edição, status parcial)
-- [ ] Persistência SQLite + retomada pós-crash
-- [ ] Watch: app SwiftUI standalone + motor Swift + HKWorkoutSession
-- [ ] Sync WatchConnectivity (treinos ida, sessões volta)
-- [ ] Alerta sonoro com iPhone em segundo plano (notificação local)
-- [ ] i18n pt-BR + en
-- [ ] E2E Maestro + CI (Linux: lint/Jest · macOS: XCTest/build/Maestro)
+- [x] Motor de sessão TS + fixtures compartilhadas
+- [x] Domínio: schema do treino + validação com erros posicionados
+- [x] iPhone: lista de treinos, importar (colar JSON), exportar
+- [x] iPhone: tela de sessão (fases, Próximo, pausa, registro no descanso)
+- [x] iPhone: histórico (lista, detalhe, edição, status parcial)
+- [x] Persistência SQLite + retomada pós-crash
+- [x] Watch: app SwiftUI standalone + motor Swift + HKWorkoutSession
+      (fontes prontas; montagem única do target no Xcode: [WATCH_SETUP.md](WATCH_SETUP.md))
+- [x] Sync WatchConnectivity (treinos ida, sessões volta)
+- [x] Alerta sonoro com iPhone em segundo plano (notificação local)
+- [x] i18n pt-BR + en
+- [x] E2E Maestro + CI (Linux: typecheck/Jest/swift test · macOS: Maestro
+      via workflow manual)
 
 ### Backlog (pós-v1)
 

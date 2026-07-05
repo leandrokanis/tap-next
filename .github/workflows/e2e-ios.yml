@@ -1,0 +1,39 @@
+# E2E Maestro no simulador iOS. Disparo manual: build nativo completo em
+# runner macOS é lento/caro demais para rodar em todo push.
+name: E2E iOS (Maestro)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  maestro:
+    name: Maestro flows — iOS simulator
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Prebuild iOS project
+        run: npx expo prebuild --platform ios --no-install
+      - name: Install pods
+        run: cd ios && pod install
+      - name: Build for simulator
+        run: |
+          xcodebuild -workspace ios/TapNext.xcworkspace -scheme TapNext \
+            -configuration Release -sdk iphonesimulator \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Boot simulator and install app
+        run: |
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone 1[56]" | head -1 | grep -oE '[0-9A-F-]{36}')
+          xcrun simctl boot "$UDID"
+          xcrun simctl install "$UDID" build/Build/Products/Release-iphonesimulator/TapNext.app
+      - name: Install Maestro
+        run: curl -Ls https://get.maestro.mobile.dev | bash
+      - name: Run flows
+        run: |
+          export PATH="$HOME/.maestro/bin:$PATH"
+          maestro test e2e/flows

@@ -6,9 +6,9 @@ Um companion open source para sessões de musculação e fisioterapia. O Tap Nex
 conduz o treino exercício a exercício, cronometrando cada fase, tocando um
 sinal quando é hora de seguir — e pedindo um único toque quando não é.
 
-> **Status:** 🚧 pré-desenvolvimento. A especificação de produto e técnica está
-> completa ([PRD](docs/PRD.md) · [SPEC](docs/SPEC.md)); a implementação ainda
-> não começou.
+> **Status:** 🛠 v1 implementada — motores TS + Swift (fixtures compartilhadas),
+> app iPhone, fontes do app watchOS, flows Maestro e CI. Passo manual restante:
+> montar o target do Watch no Xcode ([docs/WATCH_SETUP.md](docs/WATCH_SETUP.md)).
 
 ## O que ele faz
 
@@ -103,10 +103,19 @@ tap-next/
 
 ## Como rodar
 
-A implementação ainda não chegou. Quando chegar, esta seção vai cobrir:
-pré-requisitos (Node.js + Xcode), `npm install`, `npx expo run:ios`, abrir o
-target do Watch e rodar as suítes de teste. Acompanhe pelo
-[roadmap do PRD](docs/PRD.md#8-escopo).
+```bash
+npm install
+
+npm run typecheck                              # TypeScript
+npm test                                       # Jest — motor, domínio, dados
+swift test --package-path watch/TapNextEngine  # motor Swift, mesmas fixtures
+
+npx expo run:ios                               # app iPhone (macOS + Xcode)
+npm run e2e                                    # flows Maestro (ver e2e/README.md)
+```
+
+O app do Watch exige uma configuração única de target no Xcode:
+[docs/WATCH_SETUP.md](docs/WATCH_SETUP.md).
 
 ## Documentação
 
