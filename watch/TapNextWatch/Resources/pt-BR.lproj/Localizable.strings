@@ -1,0 +1,15 @@
+"resume_title" = "Sessão em andamento";
+"discard" = "Descartar";
+"empty_list" = "Sem treinos. Importe no iPhone e mantenha-o por perto para sincronizar.";
+"exercises_count %lld" = "%lld exercícios";
+"next" = "PRÓXIMO";
+"pause" = "Pausar";
+"resume" = "Retomar";
+"finish" = "Encerrar";
+"rest" = "Descanso";
+"set_of %lld %lld" = "série %1$lld de %2$lld";
+"set_done %lld" = "Série %lld ✓";
+"finish_title" = "Encerrar sessão?";
+"finish_save" = "Salvar e sair";
+"finish_discard" = "Descartar";
+"finish_continue" = "Continuar treino";
