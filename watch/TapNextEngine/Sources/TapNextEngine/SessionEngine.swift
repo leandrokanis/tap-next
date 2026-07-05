@@ -50,7 +50,7 @@ public enum SessionEngine {
 
     public static func phaseRemaining(_ state: EngineState, at: Double) -> Double? {
         guard let duration = currentPhase(state)?.duration else { return nil }
-        return max(0, Double(duration) - phaseElapsed(state, at))
+        return max(0, Double(duration) - phaseElapsed(state, at: at))
     }
 
     public static func sessionElapsed(_ state: EngineState, at: Double) -> Double {
