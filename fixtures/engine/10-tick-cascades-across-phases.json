@@ -1,0 +1,15 @@
+{
+  "name": "um tick tardio cascateia por várias fases cronometradas sem drift",
+  "workout": {
+    "version": 1,
+    "name": "Fisio core",
+    "exercises": [
+      { "name": "Prancha", "mode": "time", "sets": 3, "duration": 20, "restBetweenSets": 10 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "at": 100, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 3, "sessionElapsed": 80, "lastSet": { "setIndex": 3, "durationSeconds": 20 } } }
+  ]
+}

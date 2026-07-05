@@ -1,0 +1,25 @@
+{
+  "name": "descanso entre exercícios usa restAfterExercise e some no fim do treino",
+  "workout": {
+    "version": 1,
+    "name": "Costas + core",
+    "exercises": [
+      { "name": "Remada", "mode": "reps", "sets": 2, "reps": 12, "restBetweenSets": 60, "restAfterExercise": 120 },
+      { "name": "Prancha lateral", "mode": "time", "sets": 1, "duration": 30 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "expect": { "phase": "work", "exercise": "Remada", "setNumber": 1 } },
+    { "at": 10, "event": "next" },
+    { "expect": { "phase": "rest", "exercise": "Remada", "remaining": 60 } },
+    { "at": 70, "event": "tick" },
+    { "expect": { "phase": "work", "exercise": "Remada", "setNumber": 2 } },
+    { "at": 80, "event": "next" },
+    { "expect": { "phase": "rest", "exercise": "Remada", "setNumber": 2, "remaining": 120 } },
+    { "at": 200, "event": "tick" },
+    { "expect": { "phase": "work", "exercise": "Prancha lateral", "setNumber": 1, "remaining": 30 } },
+    { "at": 230, "event": "tick" },
+    { "expect": { "status": "finished", "completedAll": true, "completedSets": 3, "sessionElapsed": 230 } }
+  ]
+}

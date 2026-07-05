@@ -1,0 +1,21 @@
+{
+  "name": "editar a série durante o descanso sobrescreve o prescrito; as demais mantêm",
+  "workout": {
+    "version": 1,
+    "name": "Pernas A",
+    "exercises": [
+      { "name": "Agachamento", "mode": "reps", "sets": 2, "reps": 10, "weight": 60, "restBetweenSets": 90 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "at": 40, "event": "next" },
+    { "expect": { "phase": "rest", "lastSet": { "setIndex": 1, "reps": 10, "weight": 60 } } },
+    { "at": 50, "event": "updateSet", "exerciseIndex": 0, "setIndex": 1, "reps": 8, "weight": 55 },
+    { "expect": { "phase": "rest", "lastSet": { "setIndex": 1, "reps": 8, "weight": 55 } } },
+    { "at": 130, "event": "tick" },
+    { "expect": { "phase": "work", "setNumber": 2 } },
+    { "at": 160, "event": "next" },
+    { "expect": { "status": "finished", "completedSets": 2, "lastSet": { "setIndex": 2, "reps": 10, "weight": 60 } } }
+  ]
+}

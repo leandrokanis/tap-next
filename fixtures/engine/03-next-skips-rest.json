@@ -1,0 +1,21 @@
+{
+  "name": "next durante o descanso pula direto para a próxima série",
+  "workout": {
+    "version": 1,
+    "name": "Pernas A",
+    "exercises": [
+      { "name": "Agachamento", "mode": "reps", "sets": 3, "reps": 10, "restBetweenSets": 90 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "at": 40, "event": "next" },
+    { "expect": { "phase": "rest", "remaining": 90, "completedSets": 1 } },
+    { "at": 50, "event": "next" },
+    { "expect": { "status": "running", "phase": "work", "setNumber": 2, "elapsed": 0, "completedSets": 1 } },
+    { "at": 90, "event": "next" },
+    { "expect": { "phase": "rest", "setNumber": 2, "remaining": 90, "completedSets": 2 } },
+    { "at": 95, "event": "tick" },
+    { "expect": { "phase": "rest", "remaining": 85 } }
+  ]
+}
