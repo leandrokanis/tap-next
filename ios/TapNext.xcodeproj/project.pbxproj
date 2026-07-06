@@ -165,8 +165,8 @@
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
+						DevelopmentTeam = N6FFHWCSX3;
 						LastSwiftMigration = 1250;
-						DevelopmentTeam = "N6FFHWCSX3";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -360,7 +360,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "N6FFHWCSX3";
+				DEVELOPMENT_TEAM = N6FFHWCSX3;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -401,7 +401,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "N6FFHWCSX3";
+				DEVELOPMENT_TEAM = N6FFHWCSX3;
 				INFOPLIST_FILE = TapNext/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LD_RUNPATH_SEARCH_PATHS = (

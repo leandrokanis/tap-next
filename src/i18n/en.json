@@ -41,8 +41,10 @@
   },
   "import": {
     "title": "Import workout",
-    "hint": "Paste the workout JSON below. Validation points at field and position.",
-    "placeholder": "Paste the workout JSON here…",
+    "hint": "Paste the workout JSON. Validation points at field and position.",
+    "placeholder": "Tap to paste from the clipboard",
+    "paste": "Paste JSON",
+    "repaste": "Paste again",
     "action": "Import",
     "loadSample": "Load sample",
     "invalidJson": "Invalid JSON: {{message}}",

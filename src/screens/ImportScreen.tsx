@@ -1,13 +1,14 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as Clipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { listWorkouts, saveWorkout } from '../data/workoutRepository';
 import { pushWorkoutsToWatch } from '../data/watchSync';
 import { parseWorkout, ValidationError } from '../domain/workout';
 import { RootStackParamList } from '../navigation/types';
-import { BigCTA, MonoLabel, RoundIconButton } from '../ui/components';
+import { BigCTA, Card, MonoLabel, RoundIconButton } from '../ui/components';
 import { showAlert } from '../ui/dialogs';
 import { colors, fonts, radii, spacing } from '../ui/theme';
 
@@ -23,7 +24,11 @@ const SAMPLE = `{
   ]
 }`;
 
-/** Importar JSON (mock 2.3): validação aponta campo; erro de sintaxe aponta posição. */
+/**
+ * Importar JSON (mock 2.3): o usuário cola do clipboard — não edita no
+ * celular. O JSON entra como preview read-only; validação aponta campo,
+ * erro de sintaxe aponta posição.
+ */
 export default function ImportScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const [text, setText] = useState('');
@@ -31,6 +36,17 @@ export default function ImportScreen({ navigation }: Props) {
     null,
   );
   const [errors, setErrors] = useState<ValidationError[]>([]);
+
+  const setContent = (value: string) => {
+    setJsonError(null);
+    setErrors([]);
+    setText(value);
+  };
+
+  const handlePaste = async () => {
+    const clip = await Clipboard.getStringAsync();
+    if (clip.trim() !== '') setContent(clip);
+  };
 
   const handleImport = async () => {
     setJsonError(null);
@@ -56,6 +72,7 @@ export default function ImportScreen({ navigation }: Props) {
   };
 
   const errorCount = errors.length + (jsonError ? 1 : 0);
+  const empty = text.trim() === '';
 
   return (
     <View style={styles.container} testID="import-screen">
@@ -67,17 +84,17 @@ export default function ImportScreen({ navigation }: Props) {
 
       <Text style={styles.hint}>{t('import.hint')}</Text>
 
-      <TextInput
-        testID="import-input"
-        style={styles.input}
-        multiline
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder={t('import.placeholder')}
-        placeholderTextColor={colors.textDim}
-        value={text}
-        onChangeText={setText}
-      />
+      <Card style={styles.preview} testID="import-input">
+        {empty ? (
+          <View style={styles.previewEmpty}>
+            <Text style={styles.pasteHint}>{t('import.placeholder')}</Text>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={{ padding: spacing.m }}>
+            <Text style={styles.previewText}>{text}</Text>
+          </ScrollView>
+        )}
+      </Card>
 
       {errorCount > 0 && (
         <View style={styles.errorCard}>
@@ -105,10 +122,18 @@ export default function ImportScreen({ navigation }: Props) {
         </View>
       )}
 
+      <BigCTA
+        label={empty ? t('import.paste') : t('import.repaste')}
+        variant="secondary"
+        height={64}
+        onPress={handlePaste}
+        testID="paste-button"
+      />
+
       <Pressable
         testID="load-sample"
         accessibilityRole="button"
-        onPress={() => setText(SAMPLE)}
+        onPress={() => setContent(SAMPLE)}
         style={({ pressed }) => [styles.sampleLink, pressed && { opacity: 0.6 }]}
       >
         <MonoLabel tone="accent" size={12} weight="semibold">
@@ -119,7 +144,7 @@ export default function ImportScreen({ navigation }: Props) {
       <BigCTA
         label={t('import.action')}
         height={68}
-        variant={text.trim() === '' ? 'disabled' : 'primary'}
+        variant={empty ? 'disabled' : 'primary'}
         onPress={handleImport}
         testID="do-import"
       />
@@ -162,18 +187,28 @@ const styles = StyleSheet.create({
     color: colors.textMid,
     marginBottom: 14,
   },
-  input: {
+  preview: {
     flex: 1,
-    backgroundColor: colors.card,
-    borderColor: colors.borderCard,
-    borderWidth: 1,
-    borderRadius: radii.card,
-    color: colors.textMid,
-    padding: spacing.m,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  previewEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.l,
+  },
+  pasteHint: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textDim,
+    textAlign: 'center',
+  },
+  previewText: {
+    fontFamily: fonts.mono,
     fontSize: 12,
     lineHeight: 20,
-    fontFamily: fonts.mono,
-    textAlignVertical: 'top',
+    color: colors.textMid,
   },
   errorCard: {
     backgroundColor: colors.dangerSoftBg,

@@ -41,8 +41,10 @@
   },
   "import": {
     "title": "Importar treino",
-    "hint": "Cole o JSON do treino abaixo. A validação aponta campo e posição.",
-    "placeholder": "Cole o JSON do treino aqui…",
+    "hint": "Cole o JSON do treino. A validação aponta campo e posição.",
+    "placeholder": "Toque para colar da área de transferência",
+    "paste": "Colar JSON",
+    "repaste": "Colar de novo",
     "action": "Importar",
     "loadSample": "Carregar exemplo",
     "invalidJson": "JSON inválido: {{message}}",
