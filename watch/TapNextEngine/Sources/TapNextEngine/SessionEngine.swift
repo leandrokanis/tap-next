@@ -19,6 +19,9 @@ public struct EngineState: Codable, Equatable, Sendable {
     public var pausedSeconds: Double
     public var finishedAt: Double?
     public var completedSets: [LoggedSet]
+    /// Prospective adjustment applied (and cleared) when the next work set
+    /// is logged. Set during rest via Digital Crown / steppers (RF-06).
+    public var upcomingOverride: UpcomingOverride?
 }
 
 public enum SessionEngine {
@@ -33,7 +36,8 @@ public enum SessionEngine {
             pausedAt: nil,
             pausedSeconds: 0,
             finishedAt: nil,
-            completedSets: []
+            completedSets: [],
+            upcomingOverride: nil
         )
     }
 
@@ -53,6 +57,14 @@ public enum SessionEngine {
         return max(0, Double(duration) - phaseElapsed(state, at: at))
     }
 
+    /// Seconds past a rest's prescribed duration (RF-02b). 0 while the rest
+    /// is still counting down; nil outside a rest phase.
+    public static func phaseOvertime(_ state: EngineState, at: Double) -> Double? {
+        guard let phase = currentPhase(state), phase.type == .rest,
+              let duration = phase.duration else { return nil }
+        return max(0, phaseElapsed(state, at: at) - Double(duration))
+    }
+
     public static func sessionElapsed(_ state: EngineState, at: Double) -> Double {
         let reference: Double
         switch state.status {
@@ -68,10 +80,14 @@ public enum SessionEngine {
         return advance(state, at: at, completedAt: at)
     }
 
+    /// Clock tick. Auto-advances timed WORK phases (isometrics) whose
+    /// duration elapsed. Rests never auto-advance (RF-02b): past their
+    /// boundary they stay put, counting overtime, until an explicit `next`.
     public static func tick(_ state: EngineState, at: Double) -> EngineState {
         var s = state
         while s.status == .running {
-            guard let duration = currentPhase(s)?.duration else { break }
+            guard let phase = currentPhase(s), phase.type != .rest,
+                  let duration = phase.duration else { break }
             let boundary = s.phaseStartedAt + Double(duration)
             if at < boundary { break }
             s = advance(s, at: boundary, completedAt: boundary)
@@ -106,21 +122,19 @@ public enum SessionEngine {
         return s
     }
 
-    public static func updateLoggedSet(
+    /// Prospective adjustment (RF-06): merge reps/weight into the pending
+    /// override for the UPCOMING work set. Applied and cleared when that set
+    /// is logged; sets logged with an override are flagged `adjusted`.
+    public static func setUpcomingOverride(
         _ state: EngineState,
-        exerciseIndex: Int,
-        setIndex: Int,
         reps: Int? = nil,
         weight: Double? = nil
     ) -> EngineState {
         var s = state
-        s.completedSets = s.completedSets.map { set in
-            guard set.exerciseIndex == exerciseIndex, set.setIndex == setIndex else { return set }
-            var updated = set
-            if let reps { updated.reps = reps }
-            if let weight { updated.weight = weight }
-            return updated
-        }
+        var override = s.upcomingOverride ?? UpcomingOverride()
+        if let reps { override.reps = reps }
+        if let weight { override.weight = weight }
+        s.upcomingOverride = override
         return s
     }
 
@@ -141,13 +155,15 @@ public enum SessionEngine {
             durationSeconds: Int(sessionElapsed(state, at: at).rounded()),
             status: completedAllPhases(state) ? "completed" : "partial",
             source: source,
+            plannedSets: state.phases.filter { $0.type == .work }.count,
             sets: state.completedSets.map {
                 SessionSetRecord(
                     exercise: $0.exercise,
                     setIndex: $0.setIndex,
                     reps: $0.reps,
                     weight: $0.weight,
-                    durationSeconds: $0.durationSeconds
+                    durationSeconds: $0.durationSeconds,
+                    adjusted: $0.adjusted
                 )
             }
         )
@@ -158,6 +174,7 @@ public enum SessionEngine {
         var s = state
         if phase.type == .work {
             s.completedSets.append(logFor(state, phase: phase, at: at))
+            s.upcomingOverride = nil
         }
         s.phaseIndex += 1
         s.phaseStartedAt = completedAt
@@ -170,21 +187,26 @@ public enum SessionEngine {
 
     private static func logFor(_ state: EngineState, phase: Phase, at: Double) -> LoggedSet {
         let exercise = state.workout.exercises[phase.exerciseIndex]
+        let override = state.upcomingOverride
         var logged = LoggedSet(
             exerciseIndex: phase.exerciseIndex,
             exercise: exercise.name,
             setIndex: phase.setNumber ?? 0,
             reps: nil,
             weight: nil,
-            durationSeconds: nil
+            durationSeconds: nil,
+            adjusted: nil
         )
         if exercise.mode == .reps {
-            logged.reps = exercise.reps
+            logged.reps = override?.reps ?? exercise.reps
         } else {
             let held = min(phaseElapsed(state, at: at), Double(phase.duration ?? 0))
             logged.durationSeconds = Int(held.rounded())
         }
-        logged.weight = exercise.weight
+        logged.weight = override?.weight ?? exercise.weight
+        if let override, override.reps != nil || override.weight != nil {
+            logged.adjusted = true
+        }
         return logged
     }
 

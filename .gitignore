@@ -11,6 +11,7 @@ yarn-error.log*
 ios/Pods/
 ios/build/
 ios/DerivedData/
+watch/TapNextEngine/.build/
 *.xcuserstate
 xcuserdata/
 *.ipa

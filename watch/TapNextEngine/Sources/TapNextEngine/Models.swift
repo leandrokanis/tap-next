@@ -77,6 +77,19 @@ public struct LoggedSet: Codable, Equatable, Sendable {
     public var reps: Int?
     public var weight: Double?
     public var durationSeconds: Int?
+    /// True when the set was adjusted prospectively during rest (RF-06).
+    public var adjusted: Bool?
+}
+
+/// Prospective adjustment pending for the upcoming work set (RF-06).
+public struct UpcomingOverride: Codable, Equatable, Sendable {
+    public var reps: Int?
+    public var weight: Double?
+
+    public init(reps: Int? = nil, weight: Double? = nil) {
+        self.reps = reps
+        self.weight = weight
+    }
 }
 
 public struct SessionSetRecord: Codable, Equatable, Sendable {
@@ -85,6 +98,8 @@ public struct SessionSetRecord: Codable, Equatable, Sendable {
     public var reps: Int?
     public var weight: Double?
     public var durationSeconds: Int?
+    /// True when the set was adjusted prospectively during rest (RF-06).
+    public var adjusted: Bool?
 }
 
 public struct SessionRecord: Codable, Equatable, Sendable {
@@ -94,5 +109,7 @@ public struct SessionRecord: Codable, Equatable, Sendable {
     public var durationSeconds: Int
     public var status: String
     public var source: String
+    /// Total sets prescribed by the workout (for "partial n/m" badges).
+    public var plannedSets: Int?
     public var sets: [SessionSetRecord]
 }

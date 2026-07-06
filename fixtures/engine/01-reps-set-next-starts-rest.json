@@ -1,5 +1,5 @@
 {
-  "name": "série por reps avança com next, inicia descanso e volta sozinha",
+  "name": "série por reps avança com next; descanso zera e espera toque",
   "workout": {
     "version": 1,
     "name": "Pernas A",
@@ -9,15 +9,19 @@
   },
   "steps": [
     { "at": 0, "event": "start" },
-    { "expect": { "status": "running", "phase": "work", "exercise": "Agachamento", "setNumber": 1, "remaining": null, "elapsed": 0, "completedSets": 0 } },
+    { "expect": { "status": "running", "phase": "work", "exercise": "Agachamento", "setNumber": 1, "remaining": null, "overtime": null, "elapsed": 0, "completedSets": 0 } },
     { "at": 45, "event": "tick" },
     { "expect": { "phase": "work", "setNumber": 1, "elapsed": 45 } },
     { "at": 45, "event": "next" },
-    { "expect": { "phase": "rest", "setNumber": 1, "remaining": 90, "completedSets": 1, "lastSet": { "exercise": "Agachamento", "setIndex": 1, "reps": 10, "weight": 60 } } },
+    { "expect": { "phase": "rest", "setNumber": 1, "remaining": 90, "overtime": 0, "completedSets": 1, "lastSet": { "exercise": "Agachamento", "setIndex": 1, "reps": 10, "weight": 60 } } },
     { "at": 100, "event": "tick" },
-    { "expect": { "phase": "rest", "remaining": 35 } },
+    { "expect": { "phase": "rest", "remaining": 35, "overtime": 0 } },
     { "at": 135, "event": "tick" },
-    { "expect": { "status": "running", "phase": "work", "setNumber": 2, "elapsed": 0 } },
+    { "expect": { "status": "running", "phase": "rest", "setNumber": 1, "remaining": 0, "overtime": 0 } },
+    { "at": 150, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 15 } },
+    { "at": 150, "event": "next" },
+    { "expect": { "status": "running", "phase": "work", "setNumber": 2, "elapsed": 0, "overtime": null } },
     { "at": 170, "event": "next" },
     { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 2, "sessionElapsed": 170 } }
   ]

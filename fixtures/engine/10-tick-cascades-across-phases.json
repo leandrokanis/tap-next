@@ -1,5 +1,5 @@
 {
-  "name": "um tick tardio cascateia por várias fases cronometradas sem drift",
+  "name": "tick tardio cascateia works cronometrados sem drift; descanso segura a cascata",
   "workout": {
     "version": 1,
     "name": "Fisio core",
@@ -10,6 +10,16 @@
   "steps": [
     { "at": 0, "event": "start" },
     { "at": 100, "event": "tick" },
-    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 3, "sessionElapsed": 80, "lastSet": { "setIndex": 3, "durationSeconds": 20 } } }
+    { "expect": { "status": "running", "phase": "rest", "setNumber": 1, "remaining": 0, "overtime": 70, "completedSets": 1, "lastSet": { "setIndex": 1, "durationSeconds": 20 } } },
+    { "at": 100, "event": "next" },
+    { "expect": { "phase": "work", "setNumber": 2, "remaining": 20, "elapsed": 0 } },
+    { "at": 125, "event": "tick" },
+    { "expect": { "phase": "rest", "setNumber": 2, "remaining": 5, "overtime": 0, "completedSets": 2, "lastSet": { "setIndex": 2, "durationSeconds": 20 } } },
+    { "at": 200, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 70 } },
+    { "at": 200, "event": "next" },
+    { "expect": { "phase": "work", "setNumber": 3, "remaining": 20 } },
+    { "at": 220, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 3, "sessionElapsed": 220, "lastSet": { "setIndex": 3, "durationSeconds": 20 } } }
   ]
 }

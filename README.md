@@ -15,15 +15,17 @@ one tap when it isn't.
 
 - **Guided sessions** — shows the current exercise, separates work and rest
   phases, and times each one.
-- **Auto-advance** — timed phases (rests, isometric holds) move on by
-  themselves, with a sound on iPhone and haptics + sound on Apple Watch.
+- **Auto-advance (only where it makes sense)** — isometric holds move on by
+  themselves at zero, with a sound on iPhone and haptics + sound on Apple
+  Watch. A rest that hits zero alerts and **waits** in overtime (`+0:23`) —
+  the next set never starts without you.
 - **One big "Next" button** — rep-based sets have no natural end, so you
   advance them with a single, hard-to-miss tap. Tapping Next during a timed
   phase skips it.
-- **Per-set logging without friction** — when a set ends, rest starts
-  immediately; the set you just did appears pre-filled with the prescription
-  (reps · kg), editable during the rest. Don't touch it and the prescription
-  is recorded as done.
+- **Per-set logging without friction (prospective)** — when a set ends it is
+  logged with the prescription and rest starts immediately; during the rest
+  the **upcoming** set appears pre-filled (reps · kg), adjustable right
+  there. Don't touch it and the prescription stands.
 - **Standalone Apple Watch app** — runs the whole session on the Watch inside
   an `HKWorkoutSession` (no iPhone needed mid-workout, records to Apple
   Health), then syncs the results back.
@@ -61,6 +63,45 @@ one tap when it isn't.
 
 `mode: "reps"` advances on tap; `mode: "time"` advances by itself. Full schema
 in [docs/SPEC.md](docs/SPEC.md).
+
+### Generate a workout or physio plan with any LLM
+
+Paste the prompt below into any LLM (ChatGPT, Claude, Gemini…), describe your
+workout or physiotherapy protocol, and it returns JSON ready to paste into the
+app's Import screen.
+
+````text
+You will generate a workout in the Tap Next app's JSON format. Reply with ONLY
+the JSON — no surrounding text, no comments, no code fences.
+
+Schema (v1):
+- Root object: { "version": 1, "name": <string>, "exercises": [ ... ] }
+  - `version`: always the integer 1.
+  - `name`: workout name, non-empty string.
+  - `exercises`: non-empty array of exercises.
+- Each exercise:
+  - `name`: non-empty string.
+  - `mode`: "reps" (rep-based, advances on tap) or "time" (isometric/timed,
+    advances on its own). Physiotherapy and isometrics use "time".
+  - `sets`: integer > 0 (number of sets).
+  - `reps`: integer > 0. Required when mode = "reps". Omit when "time".
+  - `duration`: integer > 0, in SECONDS. Required when mode = "time".
+    Omit when "reps".
+  - `weight` (optional): load in kg, number ≥ 0 (decimals allowed).
+  - `restBetweenSets` (optional): rest between sets, integer ≥ 0, in seconds.
+  - `restAfterExercise` (optional): rest after the exercise, integer ≥ 0, seconds.
+  - `notes` (optional): string.
+
+Rules:
+- Do not invent fields outside this list.
+- All times and rests are in seconds.
+- Never put both "reps" and "duration" on the same exercise.
+
+Valid example:
+{"version":1,"name":"Legs A","exercises":[{"name":"Squat","mode":"reps","sets":3,"reps":10,"weight":60,"restBetweenSets":90},{"name":"Plank","mode":"time","sets":3,"duration":30,"restBetweenSets":15}]}
+
+My workout/physio: <describe here — exercises, sets, reps or time, loads, rests>
+````
 
 ## Architecture
 

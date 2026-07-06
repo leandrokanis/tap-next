@@ -9,8 +9,10 @@ const record: SessionRecord = {
   durationSeconds: 2880,
   status: 'partial',
   source: 'watch',
+  plannedSets: 6,
   sets: [
     { exercise: 'Agachamento', setIndex: 1, reps: 10, weight: 60 },
+    { exercise: 'Agachamento', setIndex: 2, reps: 8, weight: 65, adjusted: true },
     { exercise: 'Prancha', setIndex: 1, durationSeconds: 30 },
   ],
 };

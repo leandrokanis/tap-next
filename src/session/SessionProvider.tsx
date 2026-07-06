@@ -35,7 +35,8 @@ interface SessionContextValue {
   next(): void;
   pause(): void;
   resume(): void;
-  updateSet(update: { exerciseIndex: number; setIndex: number; reps?: number; weight?: number }): void;
+  /** Ajuste prospectivo do PRÓXIMO set durante o descanso (RF-06). */
+  setUpcomingOverride(patch: { reps?: number; weight?: number }): void;
   /** "Salvar e sair" — persists a (possibly partial) record. */
   finishAndSave(): Promise<SessionRecord>;
   /** Persists a fully-completed session (engine already finished). */
@@ -56,6 +57,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<EngineState | null>(null);
   const [now, setNow] = useState(nowSeconds());
   const phaseIndexRef = useRef<number>(-1);
+  /** Fase de descanso que já teve o sinal de "zerou" disparado (RF-02b). */
+  const restSignaledRef = useRef<number>(-1);
   const stateRef = useRef<EngineState | null>(null);
   stateRef.current = state;
 
@@ -74,6 +77,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!state) {
       phaseIndexRef.current = -1;
+      restSignaledRef.current = -1;
       return;
     }
     if (phaseIndexRef.current === -1) {
@@ -86,6 +90,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       saveSnapshot(state).catch(() => {});
     }
   }, [state?.phaseIndex, state]);
+
+  // Descanso zerou (RF-02b): o motor não avança sozinho, então o fim do
+  // descanso não muda phaseIndex — o sinal dispara aqui, uma vez por fase.
+  useEffect(() => {
+    if (!state || state.status !== 'running') return;
+    const phase = engine.currentPhase(state);
+    if (phase?.type !== 'rest') return;
+    if (restSignaledRef.current === state.phaseIndex) return;
+    if ((engine.phaseRemaining(state, now) ?? 1) > 0) return;
+    restSignaledRef.current = state.phaseIndex;
+    signalPhaseEnd();
+  }, [state, now]);
 
   // Background: schedule a local notification for the current timed phase.
   useEffect(() => {
@@ -139,12 +155,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setState((current) => (current ? engine.resume(current, nowSeconds()) : current));
   }, []);
 
-  const updateSet = useCallback(
-    (update: { exerciseIndex: number; setIndex: number; reps?: number; weight?: number }) => {
-      setState((current) => (current ? engine.updateLoggedSet(current, update) : current));
-    },
-    [],
-  );
+  const setUpcomingOverride = useCallback((patch: { reps?: number; weight?: number }) => {
+    setState((current) => (current ? engine.setUpcomingOverride(current, patch) : current));
+  }, []);
 
   const persist = useCallback(async (finished: EngineState): Promise<SessionRecord> => {
     const record = engine.summarize(finished, nowSeconds(), {
@@ -186,7 +199,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         next,
         pause,
         resume,
-        updateSet,
+        setUpcomingOverride,
         finishAndSave,
         saveCompleted,
         discard,

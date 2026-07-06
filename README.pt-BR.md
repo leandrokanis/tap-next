@@ -14,15 +14,17 @@ sinal quando é hora de seguir — e pedindo um único toque quando não é.
 
 - **Sessões guiadas** — mostra o exercício atual, separa fases de execução e
   descanso e cronometra cada uma.
-- **Avanço automático** — fases com tempo definido (descansos, isometrias)
-  avançam sozinhas, com som no iPhone e háptico + som no Apple Watch.
+- **Avanço automático (só onde faz sentido)** — isometrias avançam sozinhas
+  ao zerar, com som no iPhone e háptico + som no Apple Watch. Descanso zerado
+  avisa e **espera** em overtime (`+0:23`) — o próximo set nunca começa sem
+  você.
 - **Um botão "Próximo" grande** — séries por repetições não têm fim natural,
   então avançam com um toque único e fácil de acertar. Tocar Próximo durante
   uma fase cronometrada pula a fase.
-- **Registro por série sem fricção** — ao fim da série, o descanso começa na
-  hora; a série recém-feita aparece pré-preenchida com o prescrito
-  (reps · kg), editável durante o descanso. Não mexeu, o prescrito é gravado
-  como realizado.
+- **Registro por série sem fricção (prospectivo)** — ao fim da série, ela é
+  gravada com o prescrito e o descanso começa na hora; durante o descanso o
+  **próximo** set aparece pré-preenchido (reps · kg), ajustável ali mesmo.
+  Não mexeu, o prescrito vale.
 - **App de Watch independente** — roda a sessão inteira no relógio dentro de
   uma `HKWorkoutSession` (sem depender do iPhone durante o treino, gravando no
   app Saúde) e sincroniza os resultados depois.
@@ -60,6 +62,46 @@ sinal quando é hora de seguir — e pedindo um único toque quando não é.
 
 `mode: "reps"` avança por toque; `mode: "time"` avança sozinho. Schema completo
 em [docs/SPEC.md](docs/SPEC.md).
+
+### Gerar treino ou fisio com qualquer LLM
+
+Cole o prompt abaixo em qualquer LLM (ChatGPT, Claude, Gemini…), descreva seu
+treino ou protocolo de fisioterapia, e ele devolve o JSON pronto para colar na
+tela de Importar do app.
+
+````text
+Você vai gerar um treino no formato JSON do app Tap Next. Responda APENAS com o
+JSON, sem texto ao redor, sem comentários e sem cercas de código.
+
+Schema (v1):
+- Objeto raiz: { "version": 1, "name": <string>, "exercises": [ ... ] }
+  - `version`: sempre o inteiro 1.
+  - `name`: nome do treino, string não vazia.
+  - `exercises`: array não vazio de exercícios.
+- Cada exercício:
+  - `name`: string não vazia.
+  - `mode`: "reps" (repetições, avança por toque) ou "time" (isometria/tempo,
+    avança sozinho). Fisioterapia e isometrias usam "time".
+  - `sets`: inteiro > 0 (número de séries).
+  - `reps`: inteiro > 0. Obrigatório quando mode = "reps". Omita se "time".
+  - `duration`: inteiro > 0, em SEGUNDOS. Obrigatório quando mode = "time".
+    Omita se "reps".
+  - `weight` (opcional): carga em kg, número ≥ 0 (aceita decimais).
+  - `restBetweenSets` (opcional): descanso entre séries, inteiro ≥ 0, em segundos.
+  - `restAfterExercise` (opcional): descanso após o exercício, inteiro ≥ 0, segundos.
+  - `notes` (opcional): string.
+
+Regras:
+- Não invente campos fora dessa lista.
+- Todos os tempos e descansos são em segundos.
+- Nunca use "reps" e "duration" no mesmo exercício.
+
+Exemplo válido:
+{"version":1,"name":"Pernas A","exercises":[{"name":"Agachamento","mode":"reps","sets":3,"reps":10,"weight":60,"restBetweenSets":90},{"name":"Prancha","mode":"time","sets":3,"duration":30,"restBetweenSets":15}]}
+
+Meu treino/fisio: <descreva aqui — exercícios, séries, reps ou tempo, cargas,
+descansos>
+````
 
 ## Arquitetura
 

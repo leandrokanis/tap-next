@@ -14,12 +14,16 @@
     { "at": 10, "event": "next" },
     { "expect": { "phase": "rest", "exercise": "Remada", "remaining": 60 } },
     { "at": 70, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "exercise": "Remada", "remaining": 0, "overtime": 0 } },
+    { "at": 70, "event": "next" },
     { "expect": { "phase": "work", "exercise": "Remada", "setNumber": 2 } },
     { "at": 80, "event": "next" },
     { "expect": { "phase": "rest", "exercise": "Remada", "setNumber": 2, "remaining": 120 } },
-    { "at": 200, "event": "tick" },
+    { "at": 205, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 5 } },
+    { "at": 205, "event": "next" },
     { "expect": { "phase": "work", "exercise": "Prancha lateral", "setNumber": 1, "remaining": 30 } },
-    { "at": 230, "event": "tick" },
-    { "expect": { "status": "finished", "completedAll": true, "completedSets": 3, "sessionElapsed": 230 } }
+    { "at": 235, "event": "tick" },
+    { "expect": { "status": "finished", "completedAll": true, "completedSets": 3, "sessionElapsed": 235 } }
   ]
 }

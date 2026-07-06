@@ -24,6 +24,10 @@
     { "at": 520, "event": "tick" },
     { "expect": { "phase": "rest", "remaining": 60, "sessionElapsed": 60 } },
     { "at": 580, "event": "tick" },
-    { "expect": { "phase": "work", "setNumber": 2, "elapsed": 0, "sessionElapsed": 120 } }
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0, "sessionElapsed": 120 } },
+    { "at": 600, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 20 } },
+    { "at": 600, "event": "next" },
+    { "expect": { "phase": "work", "setNumber": 2, "elapsed": 0, "sessionElapsed": 140 } }
   ]
 }

@@ -64,22 +64,36 @@ versão futura do schema (campo `version` já reservado).
 Fases: `work(exercício, série)` → `rest` → … → `done`, com estado de pausa
 sobreposto a qualquer fase.
 
-- Fase com tempo (descanso, isometria): cronômetro regressivo, **avança
-  sozinha** ao zerar, com som (iPhone) e háptico + som (Watch).
-- Fase por repetições: cronômetro progressivo informativo; avança só pelo
-  **Próximo** (botão grande, alvo de toque generoso).
-- **Próximo durante fase cronometrada = pular** (encurtar descanso, encerrar
-  isometria mais cedo). Sempre disponível, comportamento único e consistente.
-- Pausar / retomar / encerrar disponíveis o tempo todo.
+- **Isometria** (`work` com `mode: time`): cronômetro regressivo, **avança
+  sozinha** ao zerar (entrando no descanso), com som (iPhone) e háptico + som
+  (Watch).
+- **Descanso** (`rest`): cronômetro regressivo; ao zerar **não avança
+  sozinho**. Dispara som (iPhone) / háptico + som (Watch) e passa a contar em
+  **overtime** (tempo além do prescrito). Permanece no descanso até um toque
+  explícito iniciar o próximo `work`; a contagem do próximo exercício começa
+  nesse toque, não antes. Isso significa que o motor tem um estado de descanso
+  que persiste após `remaining === 0`, resolvido só por ação do usuário (ou
+  finish).
+- **Reps** (`work` com `mode: reps`): cronômetro progressivo informativo;
+  avança só pelo **Próximo** (botão grande, alvo de toque generoso).
+- Avanço manual: **Próximo** durante uma isometria a encerra antes; **Iniciar
+  próximo** durante o descanso (running ou em overtime) inicia o próximo
+  `work` de imediato — mesmo botão, encurta o descanso.
+- Pausar / retomar / encerrar disponíveis o tempo todo. Antes de iniciar, a UI
+  lista os exercícios do treino; durante a sessão, sempre exibe o que vem a
+  seguir.
 
-### Registro por série
+### Registro por série (prospectivo)
 
-- Tocar **Próximo** ao fim de uma série inicia o descanso imediatamente.
-- Durante o descanso, a série recém-feita aparece **pré-preenchida com o
-  prescrito** (reps e kg), editável ali mesmo — steppers no iPhone, Digital
-  Crown no Watch.
-- Não mexeu ⇒ o prescrito é gravado como realizado. O caminho feliz continua
-  sendo um toque por série.
+- Tocar **Próximo** ao fim de uma série a **grava automaticamente com o
+  prescrito** (reps e kg) e inicia o descanso imediatamente.
+- Durante o descanso, o que aparece editável é o **próximo** set —
+  pré-preenchido com o prescrito, ajustável ali mesmo (steppers no iPhone,
+  Digital Crown no Watch). O ajuste define o alvo/registro do set que está por
+  vir: o usuário decide a carga/reps **antes** de executá-lo.
+- A primeira série de cada exercício não tem descanso antes dela, então usa
+  sempre o prescrito. Não ajustou ⇒ prescrito vale. O caminho feliz é apenas os
+  toques de avanço (Próximo + Iniciar próximo).
 
 ### Sessão interrompida
 

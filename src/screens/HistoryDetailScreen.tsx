@@ -3,16 +3,25 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
-import { showAlert } from '../ui/dialogs';
-
 import { deleteSession, getSession, updateSessionSet } from '../data/sessionRepository';
 import { SessionRecord } from '../domain/session';
 import { RootStackParamList } from '../navigation/types';
-import { SmallButton, Stepper } from '../ui/components';
-import { colors, spacing } from '../ui/theme';
+import {
+  Badge,
+  BigCTA,
+  Card,
+  MonoLabel,
+  RoundIconButton,
+  StatCard,
+  StepperField,
+} from '../ui/components';
+import { showAlert } from '../ui/dialogs';
+import { formatClock, formatInt, tonnageKg } from '../ui/format';
+import { colors, fonts, spacing } from '../ui/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HistoryDetail'>;
 
+/** Detalhe de sessão — mesma linguagem do resumo (1.6), com edição por set. */
 export default function HistoryDetailScreen({ route, navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { sessionId } = route.params;
@@ -47,52 +56,96 @@ export default function HistoryDetailScreen({ route, navigation }: Props) {
 
   if (!session) return <View style={styles.container} />;
 
+  const started = new Date(session.startedAt);
+  const statusLabel =
+    session.status === 'completed'
+      ? t('history.completed')
+      : session.plannedSets
+        ? t('history.partialCount', { done: session.sets.length, total: session.plannedSets })
+        : t('history.partial');
+
   return (
     <View style={styles.container} testID="history-detail-screen">
       <View style={styles.header}>
+        <RoundIconButton glyph="‹" onPress={navigation.goBack} testID="back-button" />
+        <MonoLabel>{t('history.title')}</MonoLabel>
+        <RoundIconButton
+          glyph="✕"
+          onPress={handleDelete}
+          testID="delete-session"
+          accessibilityLabel={t('history.delete')}
+        />
+      </View>
+
+      <View style={styles.titleRow}>
         <Text style={styles.title}>{session.workoutName}</Text>
-        <Text style={styles.subtitle}>
-          {new Date(session.startedAt).toLocaleString(i18n.language)} ·{' '}
-          {t('history.minutes', { count: Math.round(session.durationSeconds / 60) })} ·{' '}
-          {t(`history.${session.status}`)} · {t(`history.${session.source}`)}
-        </Text>
+        <Badge label={statusLabel} tone={session.status === 'completed' ? 'success' : 'warning'} />
+      </View>
+      <MonoLabel size={12} style={{ marginTop: 8, marginBottom: 20 }}>
+        {`${started.toLocaleDateString(i18n.language)} ${started.toLocaleTimeString(i18n.language, {
+          hour: '2-digit',
+          minute: '2-digit',
+        })} · ${t(`history.${session.source}`)}`}
+      </MonoLabel>
+
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+        <StatCard value={formatClock(session.durationSeconds)} label={t('session.duration')} />
+        <StatCard value={String(session.sets.length)} label={t('session.setsLabel')} />
+        <StatCard value={formatInt(tonnageKg(session.sets), i18n.language)} label={t('session.kgTotal')} />
       </View>
 
       <FlatList
         data={session.sets}
         keyExtractor={(_, index) => String(index)}
-        contentContainerStyle={{ gap: spacing.s, paddingBottom: spacing.xl }}
+        contentContainerStyle={{ gap: spacing.s, paddingBottom: spacing.m }}
         renderItem={({ item, index }) => (
-          <View style={styles.setCard}>
-            <Text style={styles.setTitle}>
-              {item.exercise} — {t('history.setLabel', { set: item.setIndex })}
-            </Text>
-            {item.durationSeconds !== undefined && (
-              <Text style={styles.duration}>{item.durationSeconds}s</Text>
+          <Card style={styles.setCard}>
+            <View style={styles.setHeader}>
+              <Text style={styles.setTitle}>
+                {item.exercise}{' '}
+                <Text style={{ color: colors.textDim, fontFamily: fonts.medium }}>
+                  — {t('history.setLabel', { set: item.setIndex })}
+                </Text>
+              </Text>
+              {item.adjusted ? <Badge label={t('history.adjusted')} tone="accent" /> : null}
+              {item.durationSeconds !== undefined ? (
+                <MonoLabel size={12} tone="mid">
+                  {t('detail.seconds', { count: item.durationSeconds })}
+                </MonoLabel>
+              ) : null}
+            </View>
+            {(item.reps !== undefined || item.weight !== undefined) && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                {item.reps !== undefined && (
+                  <StepperField
+                    label={t('session.repsShort')}
+                    value={item.reps}
+                    step={1}
+                    min={0}
+                    onChange={(reps) => editSet(index, { reps })}
+                  />
+                )}
+                {item.weight !== undefined && (
+                  <StepperField
+                    label={t('session.kgShort')}
+                    value={item.weight}
+                    step={2.5}
+                    min={0}
+                    onChange={(weight) => editSet(index, { weight })}
+                  />
+                )}
+              </View>
             )}
-            {item.reps !== undefined && (
-              <Stepper
-                label="reps"
-                value={item.reps}
-                step={1}
-                min={0}
-                onChange={(reps) => editSet(index, { reps })}
-              />
-            )}
-            {item.weight !== undefined && (
-              <Stepper
-                label="kg"
-                value={item.weight}
-                step={2.5}
-                min={0}
-                onChange={(weight) => editSet(index, { weight })}
-              />
-            )}
-          </View>
+          </Card>
         )}
       />
 
-      <SmallButton label={t('history.delete')} tone="danger" onPress={handleDelete} testID="delete-session" />
+      <BigCTA
+        label={t('history.delete')}
+        variant="secondary"
+        height={56}
+        onPress={handleDelete}
+      />
     </View>
   );
 }
@@ -101,20 +154,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.m,
-    gap: spacing.m,
+    paddingTop: 74,
+    paddingHorizontal: 20,
+    paddingBottom: 46,
   },
-  header: { gap: spacing.xs },
-  title: { color: colors.text, fontSize: 24, fontWeight: '800' },
-  subtitle: { color: colors.textDim, fontSize: 14 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 22,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  title: {
+    fontFamily: fonts.heavy,
+    fontSize: 30,
+    letterSpacing: -0.5,
+    color: colors.text,
+    flexShrink: 1,
+  },
   setCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.m,
-    gap: spacing.s,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
-  setTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  duration: { color: colors.textDim, fontSize: 15 },
+  setHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  setTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: colors.text,
+    flexShrink: 1,
+  },
 });

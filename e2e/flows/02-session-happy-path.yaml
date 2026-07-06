@@ -1,16 +1,18 @@
 # Funcionalidade: Sessão guiada
 #   Cenário: série por reps avança com o botão Próximo e inicia o descanso
 #     Dado que importei "Pernas A"
-#     Quando inicio o treino
+#     Quando abro o treino e toco em INICIAR
 #     Então vejo o Agachamento na série 1
 #     Quando toco em PRÓXIMO
-#     Então o descanso começa e a série 1 aparece registrada e editável
-#     Quando toco em PRÓXIMO de novo (pular descanso)
+#     Então o descanso começa e o próximo set aparece editável (prospectivo)
+#     Quando toco em INICIAR PRÓXIMO (pular descanso)
 #     Então volto para a execução na série 2
 appId: com.leandrokanis.tapnext
 ---
 - launchApp:
     clearState: true
+- assertVisible:
+    id: "home-screen"
 - tapOn:
     id: "go-import"
 - tapOn:
@@ -20,6 +22,10 @@ appId: com.leandrokanis.tapnext
 - tapOn: "OK"
 - tapOn:
     id: "workout-Pernas A"
+- assertVisible:
+    id: "workout-detail-screen"
+- tapOn:
+    id: "start-session"
 - assertVisible:
     id: "session-screen"
 - assertVisible:

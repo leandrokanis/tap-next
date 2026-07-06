@@ -28,7 +28,8 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       started_at TEXT NOT NULL,
       duration_seconds INTEGER NOT NULL,
       status TEXT NOT NULL,
-      source TEXT NOT NULL
+      source TEXT NOT NULL,
+      planned_sets INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS session_sets (
@@ -39,6 +40,7 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       reps INTEGER,
       weight REAL,
       duration_seconds INTEGER,
+      adjusted INTEGER,
       PRIMARY KEY (session_id, position)
     );
 
@@ -47,5 +49,23 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       value TEXT NOT NULL
     );
   `);
+  await migrate(db);
   return db;
+}
+
+/**
+ * Migrações idempotentes para bancos criados antes das colunas novas.
+ * SQLite não tem ADD COLUMN IF NOT EXISTS; o erro "duplicate column" é
+ * esperado e ignorado.
+ */
+async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
+  const addColumn = async (sql: string) => {
+    try {
+      await db.execAsync(sql);
+    } catch {
+      // coluna já existe
+    }
+  };
+  await addColumn('ALTER TABLE sessions ADD COLUMN planned_sets INTEGER;');
+  await addColumn('ALTER TABLE session_sets ADD COLUMN adjusted INTEGER;');
 }

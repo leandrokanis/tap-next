@@ -12,6 +12,8 @@
     { "at": 12, "event": "next" },
     { "expect": { "phase": "rest", "remaining": 15, "completedSets": 1, "lastSet": { "setIndex": 1, "durationSeconds": 12 } } },
     { "at": 27, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0 } },
+    { "at": 27, "event": "next" },
     { "expect": { "phase": "work", "setNumber": 2, "remaining": 30 } },
     { "at": 40, "event": "next" },
     { "expect": { "status": "finished", "completedAll": true, "completedSets": 2, "lastSet": { "setIndex": 2, "durationSeconds": 13 } } }

@@ -28,7 +28,13 @@ Um arquivo `.json` por cenário. `steps` intercala eventos e asserções:
 
 - `at` — relógio absoluto simulado, em segundos desde o início.
 - `event` — `start` · `next` · `tick` · `pause` · `resume` · `finish` ·
-  `updateSet` (payload: `exerciseIndex`, `setIndex`, `reps?`, `weight?`).
+  `setOverride` (payload: `reps?`, `weight?` — ajuste prospectivo do
+  PRÓXIMO set, RF-06; aplicado e limpo quando esse set é registrado, que
+  sai com `adjusted: true`).
+
+Regras de avanço: `tick` só auto-avança fases `work` cronometradas
+(isometrias). Descanso zerado **nunca** avança sozinho (RF-02b) — segue em
+`rest` acumulando `overtime` até um `next` explícito.
 
 ### Asserções
 
@@ -42,11 +48,12 @@ tempos no `at` desse evento. Campos omitidos não são verificados:
 | `exercise` | nome do exercício da fase atual |
 | `setNumber` | série atual (work) ou recém-concluída (rest) |
 | `remaining` | segundos restantes da fase cronometrada (`null` p/ reps) |
+| `overtime` | segundos além do prescrito no descanso (`null` fora de rest) |
 | `elapsed` | segundos ativos decorridos na fase |
 | `sessionElapsed` | segundos ativos da sessão (pausas excluídas) |
 | `completedSets` | quantidade de séries registradas |
 | `completedAll` | todas as fases foram percorridas |
-| `lastSet` | subconjunto do último registro (`exercise`, `setIndex`, `reps`, `weight`, `durationSeconds`) |
+| `lastSet` | subconjunto do último registro (`exercise`, `setIndex`, `reps`, `weight`, `durationSeconds`, `adjusted`) |
 
 Runners: `src/engine/__tests__/fixtures.test.ts` (Jest) e
 `watch/TapNextEngine/Tests/.../FixtureTests.swift` (XCTest).

@@ -11,19 +11,20 @@ export async function insertSession(record: SessionRecord): Promise<void> {
   const db = await getDatabase();
   const row = sessionToRow(record);
   const result = await db.runAsync(
-    'INSERT OR IGNORE INTO sessions (id, workout_name, started_at, duration_seconds, status, source) VALUES (?, ?, ?, ?, ?, ?)',
+    'INSERT OR IGNORE INTO sessions (id, workout_name, started_at, duration_seconds, status, source, planned_sets) VALUES (?, ?, ?, ?, ?, ?, ?)',
     row.id,
     row.workout_name,
     row.started_at,
     row.duration_seconds,
     row.status,
     row.source,
+    row.planned_sets,
   );
   if (result.changes === 0) return; // replay — history already has it
   for (let position = 0; position < record.sets.length; position++) {
     const s = setToRow(record.id, position, record.sets[position]);
     await db.runAsync(
-      'INSERT INTO session_sets (session_id, position, exercise, set_index, reps, weight, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO session_sets (session_id, position, exercise, set_index, reps, weight, duration_seconds, adjusted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       s.session_id,
       s.position,
       s.exercise,
@@ -31,6 +32,7 @@ export async function insertSession(record: SessionRecord): Promise<void> {
       s.reps,
       s.weight,
       s.duration_seconds,
+      s.adjusted,
     );
   }
 }

@@ -13,9 +13,7 @@ import { EngineState } from '../engine';
 
 interface EventStep {
   at?: number;
-  event: 'start' | 'next' | 'tick' | 'pause' | 'resume' | 'finish' | 'updateSet';
-  exerciseIndex?: number;
-  setIndex?: number;
+  event: 'start' | 'next' | 'tick' | 'pause' | 'resume' | 'finish' | 'setOverride';
   reps?: number;
   weight?: number;
 }
@@ -26,6 +24,8 @@ interface Expectation {
   exercise?: string;
   setNumber?: number;
   remaining?: number | null;
+  /** Seconds past a rest's prescribed duration; null outside rest. */
+  overtime?: number | null;
   elapsed?: number;
   sessionElapsed?: number;
   completedSets?: number;
@@ -94,13 +94,8 @@ function applyEvent(
       return engine.resume(state, at);
     case 'finish':
       return engine.finish(state, at);
-    case 'updateSet':
-      return engine.updateLoggedSet(state, {
-        exerciseIndex: step.exerciseIndex!,
-        setIndex: step.setIndex!,
-        reps: step.reps,
-        weight: step.weight,
-      });
+    case 'setOverride':
+      return engine.setUpcomingOverride(state, { reps: step.reps, weight: step.weight });
     default:
       throw new Error(`unknown event ${step.event as string}`);
   }
@@ -133,6 +128,11 @@ function assertExpectation(
     const remaining = engine.phaseRemaining(state, at);
     const rounded = remaining === null ? null : Math.round(remaining);
     expect(`${label} remaining=${rounded}`).toBe(`${label} remaining=${expected.remaining}`);
+  }
+  if (expected.overtime !== undefined) {
+    const overtime = engine.phaseOvertime(state, at);
+    const rounded = overtime === null ? null : Math.round(overtime);
+    expect(`${label} overtime=${rounded}`).toBe(`${label} overtime=${expected.overtime}`);
   }
   if (expected.elapsed !== undefined) {
     const elapsed = Math.round(engine.phaseElapsed(state, at));

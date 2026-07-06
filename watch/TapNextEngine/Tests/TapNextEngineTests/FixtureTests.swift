@@ -76,11 +76,9 @@ final class FixtureTests: XCTestCase {
         case "pause": return SessionEngine.pause(current, at: at)
         case "resume": return SessionEngine.resume(current, at: at)
         case "finish": return SessionEngine.finish(current, at: at)
-        case "updateSet":
-            return SessionEngine.updateLoggedSet(
+        case "setOverride":
+            return SessionEngine.setUpcomingOverride(
                 current,
-                exerciseIndex: (step["exerciseIndex"] as? NSNumber)?.intValue ?? 0,
-                setIndex: (step["setIndex"] as? NSNumber)?.intValue ?? 0,
                 reps: (step["reps"] as? NSNumber)?.intValue,
                 weight: (step["weight"] as? NSNumber)?.doubleValue
             )
@@ -121,6 +119,14 @@ final class FixtureTests: XCTestCase {
                 XCTAssertEqual(remaining, (expected["remaining"] as? NSNumber)?.intValue, "\(label): remaining")
             }
         }
+        if expected.keys.contains("overtime") {
+            let overtime = SessionEngine.phaseOvertime(state, at: at).map { Int($0.rounded()) }
+            if expected["overtime"] is NSNull {
+                XCTAssertNil(overtime, "\(label): overtime should be null")
+            } else {
+                XCTAssertEqual(overtime, (expected["overtime"] as? NSNumber)?.intValue, "\(label): overtime")
+            }
+        }
         if let elapsed = (expected["elapsed"] as? NSNumber)?.intValue {
             XCTAssertEqual(Int(SessionEngine.phaseElapsed(state, at: at).rounded()), elapsed, "\(label): elapsed")
         }
@@ -156,6 +162,9 @@ final class FixtureTests: XCTestCase {
             }
             if let durationSeconds = (lastSet["durationSeconds"] as? NSNumber)?.intValue {
                 XCTAssertEqual(last.durationSeconds, durationSeconds, "\(label): lastSet.durationSeconds")
+            }
+            if let adjusted = lastSet["adjusted"] as? Bool {
+                XCTAssertEqual(last.adjusted ?? false, adjusted, "\(label): lastSet.adjusted")
             }
         }
     }

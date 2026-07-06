@@ -8,6 +8,12 @@ export interface LoggedSet extends SessionSetRecord {
   exerciseIndex: number;
 }
 
+/** Ajuste prospectivo pendente para o próximo set (RF-06). */
+export interface UpcomingOverride {
+  reps?: number;
+  weight?: number;
+}
+
 /**
  * Immutable session state. All timestamps are epoch seconds; callers pass
  * "now" into every transition, which keeps the engine pure and lets the
@@ -32,6 +38,9 @@ export interface EngineState {
   /** Set when the session ends; freezes the session clock. */
   finishedAt: number | null;
   completedSets: LoggedSet[];
+  /** Prospective adjustment applied (and cleared) when the next work set
+   * is logged. Set during rest via steppers / Digital Crown (RF-06). */
+  upcomingOverride: UpcomingOverride | null;
 }
 
 export function start(workout: Workout, at: number): EngineState {
@@ -46,6 +55,7 @@ export function start(workout: Workout, at: number): EngineState {
     pausedSeconds: 0,
     finishedAt: null,
     completedSets: [],
+    upcomingOverride: null,
   };
 }
 
@@ -63,9 +73,19 @@ export function phaseElapsed(state: EngineState, at: number): number {
 /** Seconds left in a timed phase; null for untimed (reps) phases. */
 export function phaseRemaining(state: EngineState, at: number): number | null {
   const phase = currentPhase(state);
-  const duration = phase?.type === 'rest' ? phase.duration : phase?.duration;
+  const duration = phase?.duration;
   if (duration === undefined) return null;
   return Math.max(0, duration - phaseElapsed(state, at));
+}
+
+/**
+ * Seconds past a rest's prescribed duration (RF-02b). 0 while the rest is
+ * still counting down; null outside a rest phase.
+ */
+export function phaseOvertime(state: EngineState, at: number): number | null {
+  const phase = currentPhase(state);
+  if (phase?.type !== 'rest') return null;
+  return Math.max(0, phaseElapsed(state, at) - phase.duration);
 }
 
 /** Active session duration (pauses excluded, frozen once finished). */
@@ -77,7 +97,8 @@ export function sessionElapsed(state: EngineState, at: number): number {
 
 /**
  * Manual advance — the big Next button. Completes a reps set, ends a timed
- * work phase early (logging actual seconds held) or skips a rest.
+ * work phase early (logging actual seconds held) or starts the next work
+ * from a rest (running or in overtime).
  */
 export function next(state: EngineState, at: number): EngineState {
   if (state.status !== 'running') return state;
@@ -85,15 +106,19 @@ export function next(state: EngineState, at: number): EngineState {
 }
 
 /**
- * Clock tick. Auto-advances timed phases whose duration elapsed, cascading
- * across consecutive timed phases using exact boundary times so long ticks
- * (app woken after backgrounding) don't drift.
+ * Clock tick. Auto-advances timed WORK phases (isometrics) whose duration
+ * elapsed, cascading across consecutive timed works using exact boundary
+ * times so long ticks (app woken after backgrounding) don't drift.
+ *
+ * Rests never auto-advance (RF-02b): past their boundary they stay put,
+ * counting overtime, until an explicit `next`.
  */
 export function tick(state: EngineState, at: number): EngineState {
   let s = state;
   while (s.status === 'running') {
     const phase = currentPhase(s);
-    const duration = phase?.type === 'rest' ? phase.duration : phase?.duration;
+    if (!phase || phase.type === 'rest') break;
+    const duration = phase.duration;
     if (duration === undefined) break;
     const boundary = s.phaseStartedAt + duration;
     if (at < boundary) break;
@@ -126,21 +151,23 @@ export function finish(state: EngineState, at: number): EngineState {
   return { ...s, status: 'finished', finishedAt: at };
 }
 
-/** Adjust a logged set during rest (steppers / Digital Crown). */
-export function updateLoggedSet(
+/**
+ * Prospective adjustment (RF-06): merge reps/weight into the pending
+ * override for the UPCOMING work set. Applied and cleared when that set is
+ * logged; sets logged with an override are flagged `adjusted`.
+ */
+export function setUpcomingOverride(
   state: EngineState,
-  update: { exerciseIndex: number; setIndex: number; reps?: number; weight?: number },
+  patch: UpcomingOverride,
 ): EngineState {
-  const completedSets = state.completedSets.map((set) =>
-    set.exerciseIndex === update.exerciseIndex && set.setIndex === update.setIndex
-      ? {
-          ...set,
-          ...(update.reps !== undefined ? { reps: update.reps } : {}),
-          ...(update.weight !== undefined ? { weight: update.weight } : {}),
-        }
-      : set,
-  );
-  return { ...state, completedSets };
+  return {
+    ...state,
+    upcomingOverride: {
+      ...state.upcomingOverride,
+      ...(patch.reps !== undefined ? { reps: patch.reps } : {}),
+      ...(patch.weight !== undefined ? { weight: patch.weight } : {}),
+    },
+  };
 }
 
 export function completedAllPhases(state: EngineState): boolean {
@@ -159,6 +186,7 @@ export function summarize(
     durationSeconds: Math.round(sessionElapsed(state, at)),
     status: completedAllPhases(state) ? 'completed' : 'partial',
     source: meta.source,
+    plannedSets: state.phases.filter((p) => p.type === 'work').length,
     sets: state.completedSets.map(({ exerciseIndex: _exerciseIndex, ...record }) => record),
   };
 }
@@ -166,14 +194,16 @@ export function summarize(
 /**
  * Move past the current phase. `completedAt` is when the phase actually
  * ended (its exact boundary for auto-advance), which becomes the next
- * phase's start.
+ * phase's start. Logging a work set consumes any pending override.
  */
 function advance(state: EngineState, at: number, completedAt: number): EngineState {
   const phase = currentPhase(state);
   if (!phase) return state;
 
-  const completedSets =
-    phase.type === 'work' ? [...state.completedSets, logFor(state, phase, at)] : state.completedSets;
+  const logsWork = phase.type === 'work';
+  const completedSets = logsWork
+    ? [...state.completedSets, logFor(state, phase, at)]
+    : state.completedSets;
 
   const phaseIndex = state.phaseIndex + 1;
   const finished = phaseIndex >= state.phases.length;
@@ -184,22 +214,28 @@ function advance(state: EngineState, at: number, completedAt: number): EngineSta
     status: finished ? 'finished' : state.status,
     finishedAt: finished ? completedAt : state.finishedAt,
     completedSets,
+    upcomingOverride: logsWork ? null : state.upcomingOverride,
   };
 }
 
 function logFor(state: EngineState, phase: WorkPhase, at: number): LoggedSet {
   const exercise = state.workout.exercises[phase.exerciseIndex];
+  const override = state.upcomingOverride;
   const logged: LoggedSet = {
     exerciseIndex: phase.exerciseIndex,
     exercise: exercise.name,
     setIndex: phase.setNumber,
   };
   if (exercise.mode === 'reps') {
-    logged.reps = exercise.reps;
+    logged.reps = override?.reps ?? exercise.reps;
   } else {
     const held = Math.min(phaseElapsed(state, at), phase.duration ?? 0);
     logged.durationSeconds = Math.round(held);
   }
-  if (exercise.weight !== undefined) logged.weight = exercise.weight;
+  const weight = override?.weight ?? exercise.weight;
+  if (weight !== undefined) logged.weight = weight;
+  if (override && (override.reps !== undefined || override.weight !== undefined)) {
+    logged.adjusted = true;
+  }
   return logged;
 }

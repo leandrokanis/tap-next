@@ -1,16 +1,18 @@
 # Funcionalidade: Encerrar no meio e histórico
 #   Cenário: salvar uma sessão parcial e encontrá-la no histórico
 #     Dado que estou numa sessão com uma série feita
-#     Quando toco em Encerrar e escolho "Save and exit"
+#     Quando toco em ✕ e escolho "Save and exit"
 #     Então volto para a Home
 #     E o histórico mostra a sessão como parcial
 #
-# Nota: botões de Alert nativos são localizados; este flow assume
-# simulador em inglês (locale padrão do CI).
+# Nota: o modal de encerrar é da própria UI, mas os textos são localizados;
+# este flow assume simulador em inglês (locale padrão do CI).
 appId: com.leandrokanis.tapnext
 ---
 - launchApp:
     clearState: true
+- assertVisible:
+    id: "home-screen"
 - tapOn:
     id: "go-import"
 - tapOn:
@@ -20,6 +22,8 @@ appId: com.leandrokanis.tapnext
 - tapOn: "OK"
 - tapOn:
     id: "workout-Pernas A"
+- tapOn:
+    id: "start-session"
 - tapOn:
     id: "next-button"
 - tapOn:
@@ -31,5 +35,5 @@ appId: com.leandrokanis.tapnext
     id: "go-history"
 - assertVisible:
     id: "history-screen"
-- assertVisible: "partial"
+- assertVisible: "(?i).*partial.*"
 - assertVisible: "Pernas A"

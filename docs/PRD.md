@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Produto | Tap Next |
-| Versão do documento | 1.0 — 2026-07-05 |
+| Versão do documento | 1.1 — 2026-07-05 |
 | Status | Aprovado (decisões fechadas em entrevista de descoberta) |
 | Documentos irmãos | [SPEC.md](SPEC.md) (técnico) · [ADRs](adr/) |
 
@@ -14,8 +14,10 @@ microgerência: lembrar qual exercício vem agora, cronometrar descanso no
 relógio da parede, contar séries de cabeça, anotar carga num caderno. O Tap
 Next assume essa gerência: ele **conduz** a sessão fase a fase — execução,
 descanso, execução — cronometra o que tem tempo, avisa com som e vibração, e
-pede do usuário exatamente **um toque** quando só o usuário sabe que a série
-acabou.
+pede do usuário **um toque** para avançar cada fase: um para encerrar a série
+e começar o descanso, outro para encerrar o descanso e iniciar o próximo
+exercício. O app nunca começa um exercício sozinho — é o usuário que decide
+quando está pronto para o próximo.
 
 É open source, offline-first e sem conta: os treinos entram como JSON, o
 histórico sai como JSON, e nada depende de servidor.
@@ -54,19 +56,34 @@ histórico sai como JSON, e nada depende de servidor.
 
 ### Sessão (iPhone e Watch)
 
+- **RF-00** — Antes de iniciar, mostrar a **lista de exercícios do treino**
+  (nome, séries × reps/tempo, carga) para o usuário saber o que vai enfrentar;
+  **Iniciar** parte dessa tela.
 - **RF-01** — Exibir fase atual: nome do exercício, série X de Y, prescrição
-  (reps · kg) e cronômetro da fase.
-- **RF-02** — Fase com tempo definido (descanso ou exercício `mode: time`):
-  contagem regressiva com avanço automático ao zerar + som (iPhone) /
-  háptico e som (Watch).
+  (reps · kg) e cronômetro da fase; e **sempre deixar claro o que vem a
+  seguir** — o próximo exercício/série, para o usuário antecipar o que fará
+  depois.
+- **RF-02** — Isometria (`mode: time`): contagem regressiva com avanço
+  automático ao zerar + som (iPhone) / háptico e som (Watch); ao zerar entra
+  no descanso.
+- **RF-02b** — **Descanso**: contagem regressiva; ao zerar **não avança
+  sozinho** — sinaliza (som/iPhone, háptico+som/Watch) e **continua contando
+  em overtime** (tempo além do prescrito). O app segue no descanso até o
+  usuário tocar **Iniciar próximo**; a contagem do próximo exercício só começa
+  nesse toque.
 - **RF-03** — Fase por repetições (`mode: reps`): avanço manual pelo botão
   **Próximo**, grande e com alvo de toque generoso.
-- **RF-04** — "Próximo" durante fase cronometrada pula a fase (encurta
-  descanso, encerra isometria antes).
+- **RF-04** — **Iniciar próximo** durante o descanso (antes ou depois do zero)
+  inicia o próximo exercício imediatamente, encurtando o descanso; **Próximo**
+  durante uma isometria a encerra antes.
 - **RF-05** — Pausar, retomar e encerrar disponíveis a qualquer momento.
-- **RF-06** — Registro por série durante o descanso: valores pré-preenchidos
-  com o prescrito, editáveis (steppers no iPhone, Digital Crown no Watch);
-  sem edição, o prescrito é gravado como realizado.
+- **RF-06** — Registro **prospectivo** durante o descanso: a série recém-feita
+  é gravada automaticamente com o prescrito; o descanso exibe o **próximo**
+  set pré-preenchido com o prescrito (reps · kg), editável ali mesmo (steppers
+  no iPhone, Digital Crown no Watch). O ajuste vale para o set que está por
+  vir — o usuário decide a carga/reps antes de executá-lo, não depois. Sem
+  ajuste, o prescrito é o que vale. A primeira série de cada exercício, por não
+  ter descanso antes, usa sempre o prescrito.
 - **RF-07** — Encerrar no meio oferece *Salvar e sair* (histórico com status
   `parcial`) ou *Descartar*.
 - **RF-08** — Estado da sessão persistido a cada transição de fase; após
@@ -108,12 +125,16 @@ histórico sai como JSON, e nada depende de servidor.
 
 ## 6. Fluxo principal (caminho feliz)
 
-1. Usuário escolhe "Pernas A" (no iPhone ou no Watch) e toca **Iniciar**.
+1. Usuário escolhe "Pernas A" (no iPhone ou no Watch); a tela lista os
+   exercícios do treino; ele toca **Iniciar**.
 2. Tela mostra "Agachamento — série 1/3 — 10 reps · 60 kg", cronômetro
-   progressivo rodando.
+   progressivo rodando, e indica o que vem a seguir.
 3. Terminou a série → toca **Próximo**. Descanso de 90 s começa
-   imediatamente; a série 1 aparece pré-preenchida (10 · 60), editável.
-4. Descanso zera → som/vibração → volta sozinho para "série 2/3".
+   imediatamente; a série 1 é gravada (10 · 60) e a tela mostra o **próximo**
+   set ("série 2/3", 10 · 60) pré-preenchido e editável.
+4. Descanso zera → som/vibração; o cronômetro segue contando em overtime e a
+   tela aguarda. Quando o usuário está pronto, toca **Iniciar próximo** →
+   começa a série 2/3 e seu cronômetro.
 5. Repete até a última série do último exercício → tela de resumo → sessão
    salva no histórico (e no Health, se feita no Watch).
 6. Se feita no Watch: ao reconectar com o iPhone, a sessão aparece no
@@ -121,8 +142,9 @@ histórico sai como JSON, e nada depende de servidor.
 
 ## 7. Métricas de sucesso
 
-- Uma sessão completa exige **zero interações além do Próximo** (e de ajustes
-  voluntários de carga).
+- Uma sessão completa exige **apenas os toques de avanço** — Próximo ao fim de
+  cada série e Iniciar próximo ao fim de cada descanso — mais ajustes
+  voluntários de carga. Nenhuma outra interação obrigatória.
 - Sessão no Watch conclui e sincroniza **sem tocar no iPhone**.
 - Zero sessões perdidas em interrupção (crash/bateria) — sempre há registro
   parcial ou oferta de retomada.
@@ -163,4 +185,5 @@ histórico sai como JSON, e nada depende de servidor.
 | `expo prebuild` sobrescrever o target do Watch | `ios/` versionado; prebuild rodado conscientemente e diff revisado ([ADR 0001](adr/0001-react-native-iphone-swiftui-watch.md)) |
 | App do Watch suspenso com pulso abaixado | `HKWorkoutSession` mantém o app vivo ([ADR 0004](adr/0004-hkworkoutsession-no-watch.md)) |
 | Conflito de dados iPhone ↔ Watch | Sync append-only com donos claros por tipo de dado ([ADR 0005](adr/0005-sync-append-only-watchconnectivity.md)) |
-| Registro por série quebrar o fluxo de um toque | Registro acontece dentro do descanso, pré-preenchido; caminho feliz permanece um toque |
+| Registro por série quebrar o fluxo | Série feita gravada automática com o prescrito; o ajuste no descanso é do próximo set e é opcional — caminho feliz permanece só nos toques de avanço |
+| Usuário esquecer de tocar e o descanso correr indefinidamente | Overtime é sinalizado (som/háptico ao zerar) e o tempo extra fica visível; sessão pausável a qualquer momento |

@@ -7,6 +7,7 @@ export interface SessionRow {
   duration_seconds: number;
   status: string;
   source: string;
+  planned_sets: number | null;
 }
 
 export interface SessionSetRow {
@@ -17,6 +18,7 @@ export interface SessionSetRow {
   reps: number | null;
   weight: number | null;
   duration_seconds: number | null;
+  adjusted: number | null;
 }
 
 export function sessionToRow(record: SessionRecord): SessionRow {
@@ -27,6 +29,7 @@ export function sessionToRow(record: SessionRecord): SessionRow {
     duration_seconds: record.durationSeconds,
     status: record.status,
     source: record.source,
+    planned_sets: record.plannedSets ?? null,
   };
 }
 
@@ -39,6 +42,7 @@ export function setToRow(sessionId: string, position: number, set: SessionSetRec
     reps: set.reps ?? null,
     weight: set.weight ?? null,
     duration_seconds: set.durationSeconds ?? null,
+    adjusted: set.adjusted ? 1 : null,
   };
 }
 
@@ -50,6 +54,9 @@ export function rowToSession(row: SessionRow, setRows: SessionSetRow[]): Session
     durationSeconds: row.duration_seconds,
     status: row.status as SessionStatus,
     source: row.source as SessionSource,
+    ...(row.planned_sets !== null && row.planned_sets !== undefined
+      ? { plannedSets: row.planned_sets }
+      : {}),
     sets: setRows
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -59,6 +66,7 @@ export function rowToSession(row: SessionRow, setRows: SessionSetRow[]): Session
         ...(s.reps !== null ? { reps: s.reps } : {}),
         ...(s.weight !== null ? { weight: s.weight } : {}),
         ...(s.duration_seconds !== null ? { durationSeconds: s.duration_seconds } : {}),
+        ...(s.adjusted ? { adjusted: true } : {}),
       })),
   };
 }

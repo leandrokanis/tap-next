@@ -1,5 +1,5 @@
 {
-  "name": "exercício isométrico avança sozinho ao fim do tempo",
+  "name": "isometria avança sozinha ao fim do tempo; descanso segura em overtime",
   "workout": {
     "version": 1,
     "name": "Fisio core",
@@ -13,10 +13,14 @@
     { "at": 29, "event": "tick" },
     { "expect": { "phase": "work", "setNumber": 1, "elapsed": 29, "remaining": 1 } },
     { "at": 31, "event": "tick" },
-    { "expect": { "phase": "rest", "setNumber": 1, "remaining": 14, "completedSets": 1, "lastSet": { "exercise": "Prancha", "setIndex": 1, "durationSeconds": 30 } } },
+    { "expect": { "phase": "rest", "setNumber": 1, "remaining": 14, "overtime": 0, "completedSets": 1, "lastSet": { "exercise": "Prancha", "setIndex": 1, "durationSeconds": 30 } } },
     { "at": 45, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0 } },
+    { "at": 50, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 5 } },
+    { "at": 50, "event": "next" },
     { "expect": { "phase": "work", "setNumber": 2, "remaining": 30, "elapsed": 0 } },
-    { "at": 76, "event": "tick" },
-    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 2, "sessionElapsed": 75, "lastSet": { "setIndex": 2, "durationSeconds": 30 } } }
+    { "at": 80, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 2, "sessionElapsed": 80, "lastSet": { "setIndex": 2, "durationSeconds": 30 } } }
   ]
 }

@@ -1,16 +1,15 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-
-import { showAlert } from '../ui/dialogs';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { listWorkouts, saveWorkout } from '../data/workoutRepository';
 import { pushWorkoutsToWatch } from '../data/watchSync';
 import { parseWorkout, ValidationError } from '../domain/workout';
 import { RootStackParamList } from '../navigation/types';
-import { SmallButton } from '../ui/components';
-import { colors, spacing } from '../ui/theme';
+import { BigCTA, MonoLabel, RoundIconButton } from '../ui/components';
+import { showAlert } from '../ui/dialogs';
+import { colors, fonts, radii, spacing } from '../ui/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Import'>;
 
@@ -24,10 +23,13 @@ const SAMPLE = `{
   ]
 }`;
 
+/** Importar JSON (mock 2.3): validação aponta campo; erro de sintaxe aponta posição. */
 export default function ImportScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const [text, setText] = useState('');
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [jsonError, setJsonError] = useState<{ message: string; line?: number; col?: number } | null>(
+    null,
+  );
   const [errors, setErrors] = useState<ValidationError[]>([]);
 
   const handleImport = async () => {
@@ -37,7 +39,8 @@ export default function ImportScreen({ navigation }: Props) {
     try {
       parsed = JSON.parse(text);
     } catch (error) {
-      setJsonError(t('import.invalidJson', { message: (error as Error).message }));
+      const message = (error as Error).message;
+      setJsonError({ message, ...positionFrom(message, text) });
       return;
     }
     const result = parseWorkout(parsed);
@@ -52,8 +55,18 @@ export default function ImportScreen({ navigation }: Props) {
     navigation.goBack();
   };
 
+  const errorCount = errors.length + (jsonError ? 1 : 0);
+
   return (
     <View style={styles.container} testID="import-screen">
+      <View style={styles.header}>
+        <RoundIconButton glyph="‹" onPress={navigation.goBack} testID="back-button" />
+        <MonoLabel>{t('import.title')}</MonoLabel>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <Text style={styles.hint}>{t('import.hint')}</Text>
+
       <TextInput
         testID="import-input"
         style={styles.input}
@@ -66,46 +79,119 @@ export default function ImportScreen({ navigation }: Props) {
         onChangeText={setText}
       />
 
-      {(jsonError || errors.length > 0) && (
-        <ScrollView style={styles.errors} testID="import-errors">
-          {jsonError && <Text style={styles.errorText}>⚠ {jsonError}</Text>}
-          {errors.map((e) => (
-            <Text key={e.path + e.code} style={styles.errorText}>
-              ⚠ {e.path ? `${e.path}: ` : ''}
-              {t(`validation.${e.code}`)}
-            </Text>
-          ))}
-        </ScrollView>
+      {errorCount > 0 && (
+        <View style={styles.errorCard}>
+          <MonoLabel tone="danger" size={11} tracking={1} weight="semibold">
+            {t('import.errorsFound', { count: errorCount })}
+          </MonoLabel>
+          <ScrollView style={{ maxHeight: 120 }} testID="import-errors">
+            {jsonError && (
+              <View style={{ marginTop: 6 }}>
+                <Text style={styles.errorText}>{t('import.invalidJson', { message: jsonError.message })}</Text>
+                {jsonError.line !== undefined && (
+                  <MonoLabel size={11} style={{ marginTop: 4 }}>
+                    {t('import.lineCol', { line: jsonError.line, col: jsonError.col })}
+                  </MonoLabel>
+                )}
+              </View>
+            )}
+            {errors.map((e) => (
+              <Text key={e.path + e.code} style={[styles.errorText, { marginTop: 6 }]}>
+                {e.path ? `${e.path} — ` : ''}
+                {t(`validation.${e.code}`)}
+              </Text>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
-      <View style={styles.row}>
-        <SmallButton label={t('import.loadSample')} onPress={() => setText(SAMPLE)} testID="load-sample" />
-        <SmallButton label={t('import.action')} tone="accent" onPress={handleImport} testID="do-import" />
-      </View>
+      <Pressable
+        testID="load-sample"
+        accessibilityRole="button"
+        onPress={() => setText(SAMPLE)}
+        style={({ pressed }) => [styles.sampleLink, pressed && { opacity: 0.6 }]}
+      >
+        <MonoLabel tone="accent" size={12} weight="semibold">
+          {t('import.loadSample')}
+        </MonoLabel>
+      </Pressable>
+
+      <BigCTA
+        label={t('import.action')}
+        height={68}
+        variant={text.trim() === '' ? 'disabled' : 'primary'}
+        onPress={handleImport}
+        testID="do-import"
+      />
     </View>
   );
+}
+
+/** Extrai linha/coluna da mensagem do JSON.parse (best-effort, por engine). */
+function positionFrom(message: string, text: string): { line?: number; col?: number } {
+  const lineCol = message.match(/line (\d+) column (\d+)/i);
+  if (lineCol) return { line: Number(lineCol[1]), col: Number(lineCol[2]) };
+  const pos = message.match(/position (\d+)/i);
+  if (pos) {
+    const index = Math.min(Number(pos[1]), text.length);
+    const before = text.slice(0, index);
+    const line = before.split('\n').length;
+    const col = index - before.lastIndexOf('\n');
+    return { line, col };
+  }
+  return {};
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.m,
-    gap: spacing.m,
+    paddingTop: 74,
+    paddingHorizontal: 20,
+    paddingBottom: 46,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 22,
+  },
+  hint: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMid,
+    marginBottom: 14,
   },
   input: {
     flex: 1,
     backgroundColor: colors.card,
-    borderColor: colors.border,
+    borderColor: colors.borderCard,
     borderWidth: 1,
-    borderRadius: 14,
-    color: colors.text,
+    borderRadius: radii.card,
+    color: colors.textMid,
     padding: spacing.m,
-    fontSize: 14,
-    fontFamily: 'Menlo',
+    fontSize: 12,
+    lineHeight: 20,
+    fontFamily: fonts.mono,
     textAlignVertical: 'top',
   },
-  errors: { maxHeight: 140 },
-  errorText: { color: colors.danger, fontSize: 14, marginBottom: spacing.xs },
-  row: { flexDirection: 'row', gap: spacing.s, justifyContent: 'center' },
+  errorCard: {
+    backgroundColor: colors.dangerSoftBg,
+    borderWidth: 1,
+    borderColor: colors.dangerSoftBorder,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  errorText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.text,
+  },
+  sampleLink: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
 });

@@ -15,6 +15,8 @@ final class SessionViewModel: ObservableObject {
     private let workoutController = WorkoutSessionController()
     private var timer: Timer?
     private var lastPhaseIndex = -1
+    /// Fase de descanso que já teve o háptico de "zerou" (RF-02b).
+    private var restSignaledPhaseIndex = -1
 
     private let snapshotURL: URL = {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -70,10 +72,9 @@ final class SessionViewModel: ObservableObject {
     func pause() { mutate { SessionEngine.pause($0, at: self.epochNow()) } }
     func resume() { mutate { SessionEngine.resume($0, at: self.epochNow()) } }
 
-    func updateSet(exerciseIndex: Int, setIndex: Int, reps: Int? = nil, weight: Double? = nil) {
-        mutate {
-            SessionEngine.updateLoggedSet($0, exerciseIndex: exerciseIndex, setIndex: setIndex, reps: reps, weight: weight)
-        }
+    /// Ajuste prospectivo do PRÓXIMO set durante o descanso (RF-06).
+    func setUpcomingOverride(reps: Int? = nil, weight: Double? = nil) {
+        mutate { SessionEngine.setUpcomingOverride($0, reps: reps, weight: weight) }
     }
 
     /// "Salvar e sair" — partial record straight to the outbox.
@@ -105,6 +106,15 @@ final class SessionViewModel: ObservableObject {
             lastPhaseIndex = ticked.phaseIndex
             WKInterfaceDevice.current().play(.notification)
             saveSnapshot(ticked)
+        }
+        // Descanso zerou (RF-02b): o motor segura em overtime, então não há
+        // mudança de fase — o háptico dispara aqui, uma vez por descanso.
+        if let phase = SessionEngine.currentPhase(ticked),
+           phase.type == .rest,
+           restSignaledPhaseIndex != ticked.phaseIndex,
+           (SessionEngine.phaseRemaining(ticked, at: now) ?? 1) <= 0 {
+            restSignaledPhaseIndex = ticked.phaseIndex
+            WKInterfaceDevice.current().play(.notification)
         }
         if ticked.status == .finished, SessionEngine.completedAllPhases(ticked) {
             persist(ticked)
@@ -142,6 +152,7 @@ final class SessionViewModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         lastPhaseIndex = -1
+        restSignaledPhaseIndex = -1
         state = nil
         isActive = false
         try? FileManager.default.removeItem(at: snapshotURL)

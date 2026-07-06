@@ -13,6 +13,8 @@
     { "at": 35, "event": "next" },
     { "expect": { "phase": "rest", "remaining": 60 } },
     { "at": 95, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0 } },
+    { "at": 95, "event": "next" },
     { "expect": { "phase": "work", "setNumber": 2 } },
     { "at": 130, "event": "next" },
     { "expect": { "phase": "rest", "completedSets": 2 } },

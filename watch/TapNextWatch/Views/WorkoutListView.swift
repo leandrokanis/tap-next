@@ -14,8 +14,12 @@ struct WorkoutListView: View {
                             model.resumePendingSnapshot()
                         } label: {
                             VStack(alignment: .leading) {
-                                Text("resume_title").font(.headline)
-                                Text(snapshot.workout.name).font(.caption).foregroundStyle(.secondary)
+                                Text("resume_title")
+                                    .font(.headline)
+                                    .foregroundStyle(Theme.warning)
+                                Text(snapshot.workout.name)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(Theme.textDim)
                             }
                         }
                         Button("discard", role: .destructive) {
@@ -26,19 +30,23 @@ struct WorkoutListView: View {
 
                 if store.workouts.isEmpty {
                     Text("empty_list")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textDim)
                 } else {
                     ForEach(store.workouts, id: \.name) { workout in
                         Button {
                             model.start(workout: workout)
                         } label: {
                             VStack(alignment: .leading) {
-                                Text(workout.name).font(.headline)
+                                Text(workout.name)
+                                    .font(.system(size: 17, weight: .heavy))
                                 Text("exercises_count \(workout.exercises.count)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(Theme.textDim)
                             }
                         }
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 14).fill(Theme.card)
+                        )
                     }
                 }
             }

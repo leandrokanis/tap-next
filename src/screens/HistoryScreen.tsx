@@ -1,19 +1,21 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { buildExportBundle } from '../data/export';
 import { listSessions } from '../data/sessionRepository';
 import { listWorkouts } from '../data/workoutRepository';
 import { SessionRecord } from '../domain/session';
 import { RootStackParamList } from '../navigation/types';
-import { SmallButton } from '../ui/components';
-import { colors, spacing } from '../ui/theme';
+import { Badge, Card, MonoLabel, RoundIconButton, SegmentedTabs } from '../ui/components';
+import { formatClock, relativeDay } from '../ui/format';
+import { colors, fonts, spacing } from '../ui/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
 
+/** Histórico (mock 2.2): sessões agrupadas por mês, badges de status. */
 export default function HistoryScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -23,6 +25,19 @@ export default function HistoryScreen({ navigation }: Props) {
       listSessions().then(setSessions).catch(() => {});
     }, []),
   );
+
+  const byMonth = useMemo(() => {
+    const groups: { label: string; sessions: SessionRecord[] }[] = [];
+    for (const session of sessions) {
+      const label = new Date(session.startedAt)
+        .toLocaleDateString(i18n.language, { month: 'long' })
+        .toUpperCase();
+      const current = groups[groups.length - 1];
+      if (current && current.label === label) current.sessions.push(session);
+      else groups.push({ label, sessions: [session] });
+    }
+    return groups;
+  }, [sessions, i18n.language]);
 
   const handleExport = async () => {
     const workouts = await listWorkouts();
@@ -36,37 +51,102 @@ export default function HistoryScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container} testID="history-screen">
-      <FlatList
-        data={sessions}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: spacing.s, paddingBottom: spacing.xl }}
-        ListEmptyComponent={<Text style={styles.empty}>{t('history.empty')}</Text>}
-        renderItem={({ item }) => (
-          <Pressable
-            testID={`session-${item.id}`}
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('HistoryDetail', { sessionId: item.id })}
-            style={({ pressed }) => [styles.card, pressed && { opacity: 0.7 }]}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.workoutName}</Text>
-              <Text style={styles.cardSubtitle}>
-                {new Date(item.startedAt).toLocaleString(i18n.language)} ·{' '}
-                {t('history.minutes', { count: Math.round(item.durationSeconds / 60) })} ·{' '}
-                {t('history.sets', { count: item.sets.length })}
-              </Text>
-            </View>
-            <View style={styles.badges}>
-              <Text style={[styles.badge, item.status === 'completed' ? styles.badgeDone : styles.badgePartial]}>
-                {t(`history.${item.status}`)}
-              </Text>
-              <Text style={styles.source}>{t(`history.${item.source}`)}</Text>
-            </View>
-          </Pressable>
-        )}
+      <View style={styles.header}>
+        <Text style={styles.title}>{t('history.title')}</Text>
+        <RoundIconButton
+          glyph="↑"
+          size={44}
+          bordered
+          onPress={handleExport}
+          testID="export-button"
+          accessibilityLabel={t('history.export')}
+        />
+      </View>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: spacing.s, paddingBottom: spacing.m }}>
+        {sessions.length === 0 ? <Text style={styles.empty}>{t('history.empty')}</Text> : null}
+        {byMonth.map((group) => (
+          <View key={group.label} style={{ gap: spacing.s }}>
+            <MonoLabel style={{ marginBottom: 2 }}>{group.label}</MonoLabel>
+            {group.sessions.map((session) => (
+              <SessionCard
+                key={session.id}
+                session={session}
+                locale={i18n.language}
+                onPress={() => navigation.navigate('HistoryDetail', { sessionId: session.id })}
+              />
+            ))}
+          </View>
+        ))}
+      </ScrollView>
+
+      <SegmentedTabs
+        tabs={[
+          { label: t('home.tabWorkouts'), testID: 'go-workouts' },
+          { label: t('home.tabHistory') },
+        ]}
+        activeIndex={1}
+        onPress={(i) => {
+          if (i === 0) navigation.navigate('Home');
+        }}
       />
-      <SmallButton label={t('history.export')} onPress={handleExport} testID="export-button" />
     </View>
+  );
+}
+
+function SessionCard({
+  session,
+  locale,
+  onPress,
+}: {
+  session: SessionRecord;
+  locale: string;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const rel = relativeDay(session.startedAt, new Date());
+  const started = new Date(session.startedAt);
+  const day = rel
+    ? t(rel.key, { count: rel.count })
+    : started.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+  const time = started.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+
+  const statusLabel =
+    session.status === 'completed'
+      ? t('history.completed')
+      : session.plannedSets
+        ? t('history.partialCount', { done: session.sets.length, total: session.plannedSets })
+        : t('history.partial');
+
+  return (
+    <Pressable
+      testID={`session-${session.id}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => pressed && { opacity: 0.7 }}
+    >
+      <Card style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>{session.workoutName}</Text>
+          <Badge
+            label={statusLabel}
+            tone={session.status === 'completed' ? 'success' : 'warning'}
+          />
+        </View>
+        <View style={styles.metaRow}>
+          <MonoLabel size={12} tracking={0.5}>{`${day} ${time}`}</MonoLabel>
+          <MonoLabel size={12} tracking={0.5}>
+            {formatClock(session.durationSeconds)}
+          </MonoLabel>
+          <MonoLabel size={12} tracking={0.5}>
+            {t('history.sets', { count: session.sets.length })}
+          </MonoLabel>
+          <MonoLabel size={12} tracking={0.5}>
+            {t(`history.${session.source}`)}
+          </MonoLabel>
+        </View>
+      </Card>
+    </Pressable>
   );
 }
 
@@ -74,32 +154,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.m,
-    gap: spacing.m,
+    paddingTop: 74,
+    paddingHorizontal: 20,
+    paddingBottom: 46,
   },
-  empty: { color: colors.textDim, textAlign: 'center', marginTop: spacing.xl, fontSize: 16 },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.m,
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.s,
+    justifyContent: 'space-between',
+    marginBottom: 24,
   },
-  cardTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  cardSubtitle: { color: colors.textDim, fontSize: 13, marginTop: 2 },
-  badges: { alignItems: 'flex-end', gap: spacing.xs },
-  badge: {
-    fontSize: 12,
-    fontWeight: '700',
-    paddingHorizontal: spacing.s,
-    paddingVertical: 2,
-    borderRadius: 8,
-    overflow: 'hidden',
+  title: {
+    fontFamily: fonts.heavy,
+    fontSize: 40,
+    lineHeight: 42,
+    letterSpacing: -1,
+    color: colors.text,
   },
-  badgeDone: { backgroundColor: colors.accentDark, color: colors.text },
-  badgePartial: { backgroundColor: colors.warning, color: '#231A00' },
-  source: { color: colors.textDim, fontSize: 12 },
+  empty: {
+    fontFamily: fonts.regular,
+    color: colors.textDim,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    fontSize: 15,
+  },
+  card: {
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  cardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 17,
+    color: colors.text,
+    flexShrink: 1,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
 });

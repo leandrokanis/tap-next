@@ -24,7 +24,8 @@
           "defaultChannel": "default"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-font"
     ]
   }
 }

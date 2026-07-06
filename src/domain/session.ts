@@ -10,6 +10,8 @@ export interface SessionSetRecord {
   weight?: number;
   /** Actual seconds held, for time-mode sets. */
   durationSeconds?: number;
+  /** True when the set was adjusted prospectively during rest (RF-06). */
+  adjusted?: boolean;
 }
 
 export interface SessionRecord {
@@ -21,5 +23,7 @@ export interface SessionRecord {
   durationSeconds: number;
   status: SessionStatus;
   source: SessionSource;
+  /** Total sets prescribed by the workout (for "partial n/m" badges). */
+  plannedSets?: number;
   sets: SessionSetRecord[];
 }
