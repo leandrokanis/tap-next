@@ -35,6 +35,9 @@ export interface EngineState {
   pausedAt: number | null;
   /** Total seconds spent paused across the session. */
   pausedSeconds: number;
+  /** Active seconds spent in completed leadin count-ins — preparation time,
+   * excluded from sessionElapsed like pauses (RF-17, ADR 0006). */
+  leadinSeconds: number;
   /** Set when the session ends; freezes the session clock. */
   finishedAt: number | null;
   completedSets: LoggedSet[];
@@ -53,6 +56,7 @@ export function start(workout: Workout, at: number): EngineState {
     phaseStartedAt: at,
     pausedAt: null,
     pausedSeconds: 0,
+    leadinSeconds: 0,
     finishedAt: null,
     completedSets: [],
     upcomingOverride: null,
@@ -88,11 +92,25 @@ export function phaseOvertime(state: EngineState, at: number): number | null {
   return Math.max(0, phaseElapsed(state, at) - phase.duration);
 }
 
-/** Active session duration (pauses excluded, frozen once finished). */
+/**
+ * Active session duration (pauses and leadin count-ins excluded, frozen
+ * once finished). The session clock holds still during a count-in — the
+ * preparation is not training time (RF-17).
+ */
 export function sessionElapsed(state: EngineState, at: number): number {
   const reference =
     state.status === 'finished' ? state.finishedAt! : state.status === 'paused' ? state.pausedAt! : at;
-  return Math.max(0, reference - state.startedAt - state.pausedSeconds);
+  const base = reference - state.startedAt - state.pausedSeconds - state.leadinSeconds;
+  return Math.max(0, base - liveLeadinSeconds(state, at));
+}
+
+/** Active time in an in-flight leadin, so the exclusion applies live. */
+function liveLeadinSeconds(state: EngineState, at: number): number {
+  if (currentPhase(state)?.type !== 'leadin') return 0;
+  if (state.status === 'finished') {
+    return Math.max(0, state.finishedAt! - state.phaseStartedAt);
+  }
+  return phaseElapsed(state, at);
 }
 
 /**
@@ -204,12 +222,17 @@ function advance(state: EngineState, at: number, completedAt: number): EngineSta
   const completedSets = logsWork
     ? [...state.completedSets, logFor(state, phase, at)]
     : state.completedSets;
+  const leadinSeconds =
+    phase.type === 'leadin'
+      ? state.leadinSeconds + Math.max(0, completedAt - state.phaseStartedAt)
+      : state.leadinSeconds;
 
   const phaseIndex = state.phaseIndex + 1;
   const finished = phaseIndex >= state.phases.length;
   return {
     ...state,
     phaseIndex,
+    leadinSeconds,
     phaseStartedAt: completedAt,
     status: finished ? 'finished' : state.status,
     finishedAt: finished ? completedAt : state.finishedAt,

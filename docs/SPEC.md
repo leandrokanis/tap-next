@@ -61,19 +61,31 @@ versão futura do schema (campo `version` já reservado).
 
 ## 3. Motor de sessão (máquina de estados)
 
-Fases: `work(exercício, série)` → `rest` → … → `done`, com estado de pausa
-sobreposto a qualquer fase.
+Fases: `[leadin] → work(exercício, série)` → `rest` → … → `done`, com estado
+de pausa sobreposto a qualquer fase.
 
+- **Count-in** (`leadin`, RF-17/ADR 0006): 3 s de preparação antes de **toda**
+  série de tempo (`mode: time`), inclusive pós-descanso — 3 → 2 → 1 → vai,
+  com um tick sonoro/háptico por segundo e som distinto no "vai".
+  Auto-avança para o `work` ao zerar; **Próximo** durante o `leadin` pula a
+  preparação; não registra série. O tempo ativo em `leadin` é acumulado em
+  `leadinSeconds` e **excluído** de `sessionElapsed` (e da duração
+  registrada), análogo a `pausedSeconds` — o relógio da sessão congela
+  durante o count-in.
 - **Isometria** (`work` com `mode: time`): cronômetro regressivo, **avança
   sozinha** ao zerar (entrando no descanso), com som (iPhone) e háptico + som
   (Watch).
-- **Descanso** (`rest`): cronômetro regressivo; ao zerar **não avança
-  sozinho**. Dispara som (iPhone) / háptico + som (Watch) e passa a contar em
-  **overtime** (tempo além do prescrito). Permanece no descanso até um toque
-  explícito iniciar o próximo `work`; a contagem do próximo exercício começa
-  nesse toque, não antes. Isso significa que o motor tem um estado de descanso
-  que persiste após `remaining === 0`, resolvido só por ação do usuário (ou
-  finish).
+- **Descanso** (`rest`): cronômetro regressivo (verde de descanso, token
+  dedicado); ao zerar **não avança sozinho**. Dispara som (iPhone) / háptico
+  + som (Watch) e passa a contar em **overtime** (tempo além do prescrito) —
+  o motor conta o overtime internamente, mas a UI **não exibe** o tempo
+  extra: o card **A SEGUIR** (exercício · série · reps · kg) é o herói da
+  tela, com o CTA de iniciar embaixo. Permanece no descanso até um toque
+  explícito iniciar a próxima fase (`leadin` se a série é de tempo); a
+  contagem do próximo exercício começa nesse toque, não antes. Isso significa
+  que o motor tem um estado de descanso que persiste após `remaining === 0`,
+  resolvido só por ação do usuário (ou finish). O nome do exercício permanece
+  visível no descanso e no overtime.
 - **Reps** (`work` com `mode: reps`): cronômetro progressivo informativo;
   avança só pelo **Próximo** (botão grande, alvo de toque generoso).
 - Avanço manual: **Próximo** durante uma isometria a encerra antes; **Iniciar
@@ -150,7 +162,14 @@ Registro por sessão concluída ou parcial:
 
 ## 8. Som e alertas no iPhone
 
-- App em primeiro plano: som (expo-av) + háptico no fim de cada fase.
+- App em primeiro plano: **paleta de sons por evento** (RF-18), sintetizada
+  offline por `scripts/generate-sounds.js` (WAV versionados em
+  `assets/sounds/`), + háptico correspondente. Eventos: count-in tick, "vai",
+  fim de isometria, início de descanso, fim de descanso, sessão concluída —
+  nenhum par compartilha o mesmo som. No Watch, hápticos distintos por
+  evento. Transições por toque explícito (descanso → próxima fase) são
+  silenciosas — o toque é o feedback; isometria→descanso toca só "fim de
+  isometria".
 - App em segundo plano/tela bloqueada: **notificação local agendada** para o
   instante do fim da fase cronometrada (som do sistema), cancelada/reagendada
   a cada mudança de fase, pausa ou pulo.

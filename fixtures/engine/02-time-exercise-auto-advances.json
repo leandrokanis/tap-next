@@ -1,5 +1,5 @@
 {
-  "name": "isometria avança sozinha ao fim do tempo; descanso segura em overtime",
+  "name": "isometria avança sozinha ao fim do tempo (após leadin); descanso segura em overtime",
   "workout": {
     "version": 1,
     "name": "Fisio core",
@@ -9,18 +9,22 @@
   },
   "steps": [
     { "at": 0, "event": "start" },
-    { "expect": { "status": "running", "phase": "work", "exercise": "Prancha", "setNumber": 1, "remaining": 30 } },
-    { "at": 29, "event": "tick" },
+    { "expect": { "status": "running", "phase": "leadin", "exercise": "Prancha", "setNumber": 1, "remaining": 3 } },
+    { "at": 3, "event": "tick" },
+    { "expect": { "phase": "work", "exercise": "Prancha", "setNumber": 1, "remaining": 30, "elapsed": 0 } },
+    { "at": 32, "event": "tick" },
     { "expect": { "phase": "work", "setNumber": 1, "elapsed": 29, "remaining": 1 } },
-    { "at": 31, "event": "tick" },
+    { "at": 34, "event": "tick" },
     { "expect": { "phase": "rest", "setNumber": 1, "remaining": 14, "overtime": 0, "completedSets": 1, "lastSet": { "exercise": "Prancha", "setIndex": 1, "durationSeconds": 30 } } },
-    { "at": 45, "event": "tick" },
+    { "at": 48, "event": "tick" },
     { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0 } },
-    { "at": 50, "event": "tick" },
+    { "at": 53, "event": "tick" },
     { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 5 } },
-    { "at": 50, "event": "next" },
+    { "at": 53, "event": "next" },
+    { "expect": { "phase": "leadin", "setNumber": 2, "remaining": 3, "elapsed": 0 } },
+    { "at": 56, "event": "tick" },
     { "expect": { "phase": "work", "setNumber": 2, "remaining": 30, "elapsed": 0 } },
-    { "at": 80, "event": "tick" },
+    { "at": 86, "event": "tick" },
     { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 2, "sessionElapsed": 80, "lastSet": { "setIndex": 2, "durationSeconds": 30 } } }
   ]
 }

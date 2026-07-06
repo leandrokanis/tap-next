@@ -22,7 +22,7 @@ export function MonoLabel({
   testID,
 }: {
   children: React.ReactNode;
-  tone?: 'dim' | 'mid' | 'accent' | 'warning' | 'danger' | 'onAccent' | 'success';
+  tone?: 'dim' | 'mid' | 'accent' | 'warning' | 'danger' | 'onAccent' | 'success' | 'rest';
   size?: number;
   tracking?: number;
   weight?: 'regular' | 'medium' | 'semibold' | 'bold';
@@ -37,6 +37,7 @@ export function MonoLabel({
     danger: colors.danger,
     onAccent: colors.onAccent,
     success: colors.success,
+    rest: colors.rest,
   }[tone];
   const fontFamily = {
     regular: fonts.mono,
@@ -370,8 +371,20 @@ export function SegmentedTabs({
   );
 }
 
-/** Fileira de segmentos 4px, um por exercício. */
-export function ProgressSegments({ total, done }: { total: number; done: number }) {
+/**
+ * Fileira de segmentos 4px — um por série do exercício atual (v2): feitas
+ * em azul, a atual em branco (destaque), pendentes apagadas.
+ */
+export function ProgressSegments({
+  total,
+  done,
+  current,
+}: {
+  total: number;
+  done: number;
+  /** Índice 0-based do segmento ativo (a série em curso/preparação). */
+  current?: number;
+}) {
   return (
     <View style={{ flexDirection: 'row', gap: 5 }}>
       {Array.from({ length: total }, (_, i) => (
@@ -381,7 +394,8 @@ export function ProgressSegments({ total, done }: { total: number; done: number 
             flex: 1,
             height: 4,
             borderRadius: 2,
-            backgroundColor: i < done ? colors.accent : colors.borderPending,
+            backgroundColor:
+              i < done ? colors.accent : i === current ? colors.text : colors.borderPending,
           }}
         />
       ))}
@@ -430,11 +444,16 @@ export function TimerText({
 }: {
   children: React.ReactNode;
   size?: 'm' | 'l' | 'xl';
-  tone?: 'text' | 'accent' | 'warning';
+  tone?: 'text' | 'accent' | 'warning' | 'rest';
   testID?: string;
 }) {
   const fontSize = { m: 92, l: 104, xl: 128 }[size];
-  const color = { text: colors.text, accent: colors.accent, warning: colors.warning }[tone];
+  const color = {
+    text: colors.text,
+    accent: colors.accent,
+    warning: colors.warning,
+    rest: colors.rest,
+  }[tone];
   return (
     <Text
       testID={testID}

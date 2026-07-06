@@ -6,6 +6,8 @@ enum Theme {
     static let accent = Color(red: 0x4D / 255, green: 0xA3 / 255, blue: 0xFF / 255)
     static let onAccent = Color(red: 0x06 / 255, green: 0x12 / 255, blue: 0x1F / 255)
     static let warning = Color(red: 0xFF / 255, green: 0xB0 / 255, blue: 0x20 / 255)
+    /// Verde do descanso (v2) — distinto do verde de "completa".
+    static let restGreen = Color(red: 0x35 / 255, green: 0xD0 / 255, blue: 0xA0 / 255)
     static let textMid = Color(red: 0xA7 / 255, green: 0xAD / 255, blue: 0xBA / 255)
     static let textDim = Color(red: 0x8A / 255, green: 0x91 / 255, blue: 0x9E / 255)
     static let card = Color(red: 0x14 / 255, green: 0x18 / 255, blue: 0x20 / 255)
@@ -34,7 +36,9 @@ struct SessionView: View {
         ScrollView {
             VStack(spacing: 8) {
                 if let phase {
-                    if phase.type == .work {
+                    if phase.type == .leadin {
+                        leadinView(state: state, phase: phase)
+                    } else if phase.type == .work {
                         workView(state: state, phase: phase)
                     } else {
                         restView(state: state, phase: phase)
@@ -60,6 +64,30 @@ struct SessionView: View {
             Button("finish_save") { model.finishAndSave() }
             Button("finish_discard", role: .destructive) { model.discard() }
             Button("finish_continue", role: .cancel) {}
+        }
+    }
+
+    // MARK: - Count-in (RF-17)
+
+    @ViewBuilder
+    private func leadinView(state: EngineState, phase: Phase) -> some View {
+        let exercise = state.workout.exercises[phase.exerciseIndex]
+        let remaining = SessionEngine.phaseRemaining(state, at: model.now) ?? 0
+        let count = max(1, Int(remaining.rounded(.up)))
+        VStack(spacing: 4) {
+            HStack {
+                Text("get_ready")
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Spacer()
+            }
+            Text(exercise.name)
+                .font(.system(size: 19, weight: .heavy))
+                .multilineTextAlignment(.center)
+            Text("\(count)")
+                .font(.system(size: 64, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white)
         }
     }
 
@@ -100,42 +128,42 @@ struct SessionView: View {
     private func restView(state: EngineState, phase: Phase) -> some View {
         let overtime = SessionEngine.phaseOvertime(state, at: model.now) ?? 0
         if overtime > 0 {
-            overtimeView(overtime: overtime)
+            overtimeView(state: state)
         } else {
             VStack(spacing: 6) {
                 HStack {
                     Text("rest")
                         .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(Theme.restGreen)
                     Spacer()
                 }
+                // Nome do exercício sempre visível no descanso (v2).
+                Text(state.workout.exercises[phase.exerciseIndex].name)
+                    .font(.system(size: 15, weight: .heavy))
+                    .multilineTextAlignment(.center)
                 Text(clock(state: state, phase: phase))
                     .font(.system(size: 46, weight: .heavy, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.restGreen)
 
                 upcomingEditor(state: state)
             }
         }
     }
 
+    /// Overtime sem contador (v2): o próximo set é o herói — o motor segue
+    /// contando por dentro, mas a tela não mostra o tempo extra.
     @ViewBuilder
-    private func overtimeView(overtime: Double) -> some View {
+    private func overtimeView(state: EngineState) -> some View {
+        let nextIndex = state.phaseIndex + 1
         VStack(spacing: 8) {
-            HStack {
-                Text("rest_zeroed")
-                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(Theme.warning)
-                Spacer()
+            if nextIndex < state.phases.count, state.phases[nextIndex].type != .rest {
+                let nextPhase = state.phases[nextIndex]
+                Text(state.workout.exercises[nextPhase.exerciseIndex].name)
+                    .font(.system(size: 19, weight: .heavy))
+                    .multilineTextAlignment(.center)
             }
-            Text("+" + formatted(seconds: overtime))
-                .font(.system(size: 56, weight: .heavy, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Theme.warning)
-            Text("tap_ready")
-                .font(.caption2)
-                .foregroundStyle(Theme.textMid)
-                .multilineTextAlignment(.center)
+            upcomingEditor(state: state)
         }
     }
 
@@ -146,7 +174,8 @@ struct SessionView: View {
         let nextIndex = state.phaseIndex + 1
         if nextIndex < state.phases.count {
             let nextPhase = state.phases[nextIndex]
-            if nextPhase.type == .work {
+            // leadin e work apontam ambos para a série que vem a seguir.
+            if nextPhase.type != .rest {
                 let exercise = state.workout.exercises[nextPhase.exerciseIndex]
                 VStack(spacing: 4) {
                     Text("next_up_set \(nextPhase.setNumber ?? 0) \(exercise.sets)")
@@ -194,17 +223,19 @@ struct SessionView: View {
     @ViewBuilder
     private func cta(state: EngineState, phase: Phase) -> some View {
         let isRest = phase.type == .rest
+        let isLeadin = phase.type == .leadin
         let isTimedWork = phase.type == .work && phase.mode == .time
+        let secondary = isTimedWork || isLeadin
         Button {
             model.next()
         } label: {
-            Text(isRest ? "start_next" : isTimedWork ? "end_early" : "next")
-                .font(.system(size: isRest ? 14 : 16, weight: .heavy))
-                .foregroundStyle(isTimedWork ? Theme.textMid : Theme.onAccent)
+            Text(isRest ? "start_next" : isLeadin ? "leadin_skip" : isTimedWork ? "end_early" : "next")
+                .font(.system(size: isRest || isLeadin ? 14 : 16, weight: .heavy))
+                .foregroundStyle(secondary ? Theme.textMid : Theme.onAccent)
                 .frame(maxWidth: .infinity, minHeight: 52)
         }
         .buttonStyle(.borderedProminent)
-        .tint(isTimedWork ? Theme.card : Theme.accent)
+        .tint(secondary ? Theme.card : Theme.accent)
     }
 
     // MARK: - Helpers

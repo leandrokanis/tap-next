@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "e2e": "maestro test e2e/flows"
+    "e2e": "maestro test e2e/flows",
+    "sounds": "node scripts/generate-sounds.js"
   },
   "dependencies": {
     "@expo-google-fonts/archivo": "^0.4.2",

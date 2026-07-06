@@ -62,15 +62,20 @@ histórico sai como JSON, e nada depende de servidor.
 - **RF-01** — Exibir fase atual: nome do exercício, série X de Y, prescrição
   (reps · kg) e cronômetro da fase; e **sempre deixar claro o que vem a
   seguir** — o próximo exercício/série, para o usuário antecipar o que fará
-  depois.
+  depois. A barra de progresso do topo mostra as **séries do exercício
+  atual** (a atual em destaque); a posição no treino aparece no rótulo
+  `EXERCÍCIO X DE Y`. O nome do exercício permanece visível também no
+  descanso e no overtime.
 - **RF-02** — Isometria (`mode: time`): contagem regressiva com avanço
   automático ao zerar + som (iPhone) / háptico e som (Watch); ao zerar entra
   no descanso.
-- **RF-02b** — **Descanso**: contagem regressiva; ao zerar **não avança
-  sozinho** — sinaliza (som/iPhone, háptico+som/Watch) e **continua contando
-  em overtime** (tempo além do prescrito). O app segue no descanso até o
-  usuário tocar **Iniciar próximo**; a contagem do próximo exercício só começa
-  nesse toque.
+- **RF-02b** — **Descanso**: contagem regressiva (verde de descanso, cor
+  dedicada); ao zerar **não avança sozinho** — sinaliza (som/iPhone,
+  háptico+som/Watch) e **continua contando em overtime** internamente, mas a
+  UI **não exibe** o tempo extra: o card **A SEGUIR** vira o elemento de
+  maior destaque, com o CTA de iniciar embaixo (sem urgência). O app segue no
+  descanso até o usuário tocar **Iniciar próximo**; a contagem do próximo
+  exercício só começa nesse toque.
 - **RF-03** — Fase por repetições (`mode: reps`): avanço manual pelo botão
   **Próximo**, grande e com alvo de toque generoso.
 - **RF-04** — **Iniciar próximo** durante o descanso (antes ou depois do zero)
@@ -88,6 +93,15 @@ histórico sai como JSON, e nada depende de servidor.
   `parcial`) ou *Descartar*.
 - **RF-08** — Estado da sessão persistido a cada transição de fase; após
   crash/morte do processo, oferecer retomada de onde parou.
+- **RF-17** — **Count-in de 3 s** antes de **toda** série de tempo
+  (`mode: time`), inclusive pós-descanso: 3 → 2 → 1 → vai, com um sinal por
+  segundo e som distinto no "vai". Avanço manual durante o count-in inicia a
+  série na hora; pausa congela a contagem. A preparação **não conta** na
+  duração da sessão (exibida nem registrada). ([ADR 0006](adr/0006-fase-leadin-count-in.md))
+- **RF-18** — **Som por evento**: paleta fixa sintetizada por script, com um
+  som próprio e reconhecível para cada evento — count-in tick, "vai", fim de
+  isometria, início de descanso, fim de descanso, sessão concluída; nenhum
+  par compartilha o mesmo som. No Watch, hápticos distintos por evento.
 
 ### Apple Watch
 

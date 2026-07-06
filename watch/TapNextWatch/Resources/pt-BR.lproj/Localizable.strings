@@ -9,13 +9,13 @@
 "resume" = "Retomar";
 "finish" = "Encerrar";
 "rest" = "DESCANSO";
-"rest_zeroed" = "ZEROU";
-"tap_ready" = "Toque quando\nestiver pronto";
 "next_up_set %lld %lld" = "A SEGUIR · SÉRIE %1$lld/%2$lld";
 "crown_hint" = "GIRE A COROA P/ AJUSTAR";
 "reps" = "REPS";
 "kg" = "KG";
 "hold" = "SEGURE";
+"get_ready" = "PREPARE";
+"leadin_skip" = "COMEÇAR AGORA";
 "set_of %lld %lld" = "série %1$lld de %2$lld";
 "set_done %lld" = "Série %lld ✓";
 "finish_title" = "Encerrar sessão?";

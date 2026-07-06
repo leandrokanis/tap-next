@@ -11,14 +11,16 @@ const workout: Workout = {
 };
 
 describe('expandPhases', () => {
-  it('interleaves rests between sets, adds restAfterExercise, no trailing rest', () => {
+  it('interleaves rests between sets, adds restAfterExercise, no trailing rest, leadin before timed sets', () => {
     expect(expandPhases(workout)).toEqual([
       { type: 'work', exerciseIndex: 0, setNumber: 1, mode: 'reps' },
       { type: 'rest', exerciseIndex: 0, afterSetNumber: 1, duration: 60 },
       { type: 'work', exerciseIndex: 0, setNumber: 2, mode: 'reps' },
       { type: 'rest', exerciseIndex: 0, afterSetNumber: 2, duration: 120 },
+      { type: 'leadin', exerciseIndex: 1, setNumber: 1, duration: 3 },
       { type: 'work', exerciseIndex: 1, setNumber: 1, mode: 'time', duration: 30 },
       { type: 'rest', exerciseIndex: 1, afterSetNumber: 1, duration: 15 },
+      { type: 'leadin', exerciseIndex: 1, setNumber: 2, duration: 3 },
       { type: 'work', exerciseIndex: 1, setNumber: 2, mode: 'time', duration: 30 },
     ]);
   });

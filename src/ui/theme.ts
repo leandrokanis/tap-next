@@ -34,6 +34,11 @@ export const colors = {
   warningSoftBg: 'rgba(255,176,32,0.12)',
   warningSoftBorder: 'rgba(255,176,32,0.35)',
 
+  /** Verde do descanso (RF da v2) — distinto do verde de "completa". */
+  rest: '#35D0A0',
+  restSoftBg: 'rgba(53,208,160,0.10)',
+  restSoftBorder: 'rgba(53,208,160,0.30)',
+
   /** Só "completa". */
   success: '#4ECB71',
   successSoftBg: 'rgba(78,203,113,0.12)',

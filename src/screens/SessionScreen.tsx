@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import * as engine from '../engine/engine';
 import { LoggedSet } from '../engine/engine';
-import { RestPhase, WorkPhase } from '../engine/phases';
+import { LeadinPhase, RestPhase, WorkPhase } from '../engine/phases';
 import { RootStackParamList } from '../navigation/types';
 import { useSession } from '../session/SessionProvider';
 import {
@@ -48,6 +48,17 @@ export default function SessionScreen({ navigation }: Props) {
   const totalSets = state.phases.filter((p) => p.type === 'work').length;
   const doneSets = state.completedSets.length;
 
+  const currentExercise = state.workout.exercises[phase.exerciseIndex];
+  const setsDoneInExercise = state.completedSets.filter(
+    (s) => s.exerciseIndex === phase.exerciseIndex,
+  ).length;
+  const currentSetIndex =
+    phase.type === 'rest'
+      ? phase.afterSetNumber < currentExercise.sets
+        ? phase.afterSetNumber
+        : undefined
+      : phase.setNumber - 1;
+
   const handleFinishSave = () => {
     setFinishModal(false);
     session.finishAndSave().then(() => navigation.popToTop());
@@ -81,14 +92,25 @@ export default function SessionScreen({ navigation }: Props) {
         </View>
       </View>
 
+      {/* Localização: EXERCÍCIO X DE Y no rótulo; a barra mostra as séries
+          do exercício atual — a atual em destaque (v2). */}
       <View style={{ marginBottom: 30 }}>
+        <MonoLabel tone="accent" size={12} style={{ marginBottom: 10 }}>
+          {t('session.exerciseOf', {
+            current: phase.exerciseIndex + 1,
+            total: state.workout.exercises.length,
+          })}
+        </MonoLabel>
         <ProgressSegments
-          total={state.workout.exercises.length}
-          done={phase.exerciseIndex + 1}
+          total={currentExercise.sets}
+          done={setsDoneInExercise}
+          current={currentSetIndex}
         />
       </View>
 
-      {phase.type === 'work' ? (
+      {phase.type === 'leadin' ? (
+        <LeadinView phase={phase} />
+      ) : phase.type === 'work' ? (
         <WorkView phase={phase} />
       ) : (
         <RestView phase={phase} />
@@ -109,6 +131,53 @@ export default function SessionScreen({ navigation }: Props) {
           },
           { label: t('session.finishDiscard'), onPress: handleFinishDiscard, variant: 'text-danger' },
         ]}
+      />
+    </View>
+  );
+}
+
+/** Count-in 3 → 2 → 1 antes de toda série de tempo (RF-17, v2). */
+function LeadinView({ phase }: { phase: LeadinPhase }) {
+  const { t } = useTranslation();
+  const session = useSession();
+  const state = session.state!;
+
+  const exercise = state.workout.exercises[phase.exerciseIndex];
+  const remaining = engine.phaseRemaining(state, session.now) ?? 0;
+  const count = Math.max(1, Math.ceil(remaining));
+
+  return (
+    <View style={{ flex: 1 }} testID="leadin-phase">
+      <Text style={styles.exerciseName} testID="exercise-name">
+        {exercise.name}
+      </Text>
+      <View style={styles.setRow}>
+        <Text style={styles.setLabel}>
+          {t('session.setOfCap', { current: phase.setNumber })}{' '}
+          <Text style={{ color: colors.textDim, fontFamily: fonts.medium }}>
+            {t('session.ofTotal', { total: exercise.sets })}
+          </Text>
+        </Text>
+        <Text style={styles.prescription}>
+          {t('session.isoPrescription', { count: exercise.duration ?? 0 })}
+        </Text>
+      </View>
+
+      <View style={styles.center}>
+        <MonoLabel tone="accent" tracking={3} style={{ marginBottom: 6 }}>
+          {t('session.getReady')}
+        </MonoLabel>
+        <TimerText size="xl" testID="phase-clock">
+          {String(count)}
+        </TimerText>
+      </View>
+
+      <BigCTA
+        label={t('session.leadinSkip')}
+        variant="secondary"
+        height={64}
+        onPress={session.next}
+        testID="next-button"
       />
     </View>
   );
@@ -137,12 +206,6 @@ function WorkView({ phase }: { phase: WorkPhase }) {
 
   return (
     <View style={{ flex: 1 }} testID="work-phase">
-      <MonoLabel tone="accent" size={12}>
-        {t('session.exerciseOf', {
-          current: phase.exerciseIndex + 1,
-          total: state.workout.exercises.length,
-        })}
-      </MonoLabel>
       <Text style={styles.exerciseName} testID="exercise-name">
         {exercise.name}
       </Text>
@@ -166,7 +229,6 @@ function WorkView({ phase }: { phase: WorkPhase }) {
               <MonoLabel style={{ marginTop: 8 }}>{t('session.hold')}</MonoLabel>
             </View>
           </ProgressRing>
-          <Text style={styles.hint}>{t('session.isoHint')}</Text>
         </View>
       ) : (
         <View style={styles.center}>
@@ -212,7 +274,7 @@ function WorkNextUp({ phase }: { phase: WorkPhase }) {
   if (following.type === 'rest') {
     const afterRest = state!.phases[state!.phaseIndex + 2];
     const detail =
-      afterRest?.type === 'work'
+      afterRest && afterRest.type !== 'rest'
         ? t('session.toSet', {
             set: afterRest.setNumber,
             total: state!.workout.exercises[afterRest.exerciseIndex].sets,
@@ -240,7 +302,11 @@ function WorkNextUp({ phase }: { phase: WorkPhase }) {
   );
 }
 
-/** Descanso (1.3) e overtime (1.4), com registro prospectivo (RF-06). */
+/**
+ * Descanso (1.3) e overtime (1.4), com registro prospectivo (RF-06).
+ * v2: nome do exercício sempre visível; cronômetro verde de descanso; no
+ * overtime não há contador — o card A SEGUIR é o herói (RF-02b ajustado).
+ */
 function RestView({ phase }: { phase: RestPhase }) {
   const { t } = useTranslation();
   const session = useSession();
@@ -252,8 +318,10 @@ function RestView({ phase }: { phase: RestPhase }) {
   const inOvertime = overtime > 0;
   const lastSet = state.completedSets[state.completedSets.length - 1];
 
+  const restExercise = state.workout.exercises[phase.exerciseIndex];
   const nextWork = state.phases[state.phaseIndex + 1];
-  const nextWorkPhase = nextWork?.type === 'work' ? nextWork : null;
+  // leadin e work apontam ambos para a série que vem a seguir.
+  const nextWorkPhase = nextWork && nextWork.type !== 'rest' ? nextWork : null;
   const nextExercise = nextWorkPhase
     ? state.workout.exercises[nextWorkPhase.exerciseIndex]
     : null;
@@ -261,8 +329,24 @@ function RestView({ phase }: { phase: RestPhase }) {
   const upcomingReps = override?.reps ?? nextExercise?.reps ?? 0;
   const upcomingWeight = override?.weight ?? nextExercise?.weight ?? 0;
 
+  const upcomingSummary = nextExercise
+    ? [
+        nextExercise.mode === 'reps' ? t('session.reps', { count: upcomingReps }) : null,
+        nextExercise.mode === 'time'
+          ? t('session.isoPrescription', { count: nextExercise.duration ?? 0 })
+          : null,
+        upcomingWeight ? t('session.kg', { count: upcomingWeight }) : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : undefined;
+
   return (
     <View style={{ flex: 1 }} testID="rest-phase">
+      <Text style={styles.restExerciseName} testID="exercise-name">
+        {restExercise.name}
+      </Text>
+
       {!inOvertime && lastSet ? (
         <View style={styles.savedChip}>
           <View style={styles.savedCheck}>
@@ -277,79 +361,53 @@ function RestView({ phase }: { phase: RestPhase }) {
         </View>
       ) : null}
 
-      {inOvertime ? (
-        <View style={[styles.center, { flex: 0, marginTop: 34 }]}>
-          <View style={styles.overtimePill}>
-            <View style={styles.overtimeDot} />
-            <MonoLabel tone="warning" size={12} weight="semibold">
-              {t('session.restZeroed')}
-            </MonoLabel>
-          </View>
-          <TimerText size="xl" tone="warning" testID="phase-clock">
-            {`+${formatClock(overtime)}`}
-          </TimerText>
-          <Text style={[styles.hint, { marginTop: 14 }]}>
-            {t('session.overtimeHint', { count: phase.duration })}
-          </Text>
-          <Text style={styles.tapReady}>{t('session.tapReady')}</Text>
-        </View>
-      ) : (
+      {!inOvertime ? (
         <View style={[styles.center, { flex: 0, marginTop: 8 }]}>
-          <MonoLabel tone="accent" tracking={3} style={{ marginBottom: 6 }}>
+          <MonoLabel tone="rest" tracking={3} style={{ marginBottom: 6 }}>
             {t('session.rest')}
           </MonoLabel>
-          <TimerText size="xl" tone="accent" testID="phase-clock">
+          <TimerText size="xl" tone="rest" testID="phase-clock">
             {formatClock(remaining)}
           </TimerText>
           <MonoLabel size={12} style={{ marginTop: 10 }}>
             {t('session.restOf', { time: formatClock(phase.duration) })}
           </MonoLabel>
         </View>
-      )}
+      ) : null}
 
       <View style={{ flex: 1 }} />
 
-      {inOvertime || !nextExercise || !nextWorkPhase ? (
-        <View style={{ marginBottom: 12 }}>
-          <NextUpBar
-            label={t('session.nextUpLabel')}
-            title={
-              nextExercise && nextWorkPhase
-                ? t('session.exerciseSet', {
-                    exercise: nextExercise.name,
-                    set: nextWorkPhase.setNumber,
-                    total: nextExercise.sets,
-                  })
-                : t('session.summaryTitle')
-            }
-            detail={
-              nextExercise
-                ? [
-                    override?.reps ?? nextExercise.reps,
-                    upcomingWeight ? t('session.kg', { count: upcomingWeight }) : null,
-                  ]
-                    .filter((v) => v !== undefined && v !== null)
-                    .join(' · ')
-                : undefined
-            }
-          />
-        </View>
-      ) : (
-        <Card big style={styles.prospectiveCard} testID="set-log">
-          <View style={styles.prospectiveHeader}>
-            <MonoLabel tone="accent" size={10} weight="semibold">
-              {t('session.nextUpLabel')}
-            </MonoLabel>
-            <Text style={styles.prospectiveTitle}>
+      {nextExercise && nextWorkPhase ? (
+        <Card
+          big
+          style={inOvertime ? [styles.prospectiveCard, styles.heroCard] : styles.prospectiveCard}
+          testID="set-log"
+        >
+          <MonoLabel tone="accent" size={inOvertime ? 11 : 10} weight="semibold">
+            {t('session.nextUpLabel')}
+          </MonoLabel>
+          {inOvertime ? (
+            <>
+              <Text style={styles.heroTitle}>{nextExercise.name}</Text>
+              <Text style={styles.heroDetail}>
+                {t('session.setOf', {
+                  current: nextWorkPhase.setNumber,
+                  total: nextExercise.sets,
+                })}
+                {upcomingSummary ? ` · ${upcomingSummary}` : ''}
+              </Text>
+            </>
+          ) : (
+            <Text style={[styles.prospectiveTitle, { marginTop: 6, marginBottom: 14 }]}>
               {t('session.exerciseSet', {
                 exercise: nextExercise.name,
                 set: nextWorkPhase.setNumber,
                 total: nextExercise.sets,
               })}
             </Text>
-          </View>
+          )}
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            {nextWorkPhase.mode === 'reps' ? (
+            {nextExercise.mode === 'reps' ? (
               <StepperField
                 label={t('session.repsShort')}
                 value={upcomingReps}
@@ -359,16 +417,22 @@ function RestView({ phase }: { phase: RestPhase }) {
                 testID="log-reps"
               />
             ) : null}
-            <StepperField
-              label={t('session.kgShort')}
-              value={upcomingWeight}
-              step={2.5}
-              min={0}
-              onChange={(weight) => session.setUpcomingOverride({ weight })}
-              testID="log-weight"
-            />
+            {nextExercise.mode === 'reps' || nextExercise.weight !== undefined ? (
+              <StepperField
+                label={t('session.kgShort')}
+                value={upcomingWeight}
+                step={2.5}
+                min={0}
+                onChange={(weight) => session.setUpcomingOverride({ weight })}
+                testID="log-weight"
+              />
+            ) : null}
           </View>
         </Card>
+      ) : (
+        <View style={{ marginBottom: 12 }}>
+          <NextUpBar label={t('session.nextUpLabel')} title={t('session.summaryTitle')} />
+        </View>
       )}
 
       <BigCTA
@@ -534,18 +598,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hint: {
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    color: colors.textDim,
-    marginTop: 18,
-    textAlign: 'center',
-  },
-  tapReady: {
-    fontFamily: fonts.monoSemiBold,
-    fontSize: 15,
+  restExerciseName: {
+    fontFamily: fonts.heavy,
+    fontSize: 24,
+    letterSpacing: -0.5,
     color: colors.text,
-    marginTop: 30,
+    marginBottom: 16,
   },
   savedChip: {
     flexDirection: 'row',
@@ -573,41 +631,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMid,
   },
-  overtimePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.warningSoftBg,
-    borderWidth: 1,
-    borderColor: colors.warningSoftBorder,
-    borderRadius: radii.pill,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-  },
-  overtimeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.warning,
-  },
   prospectiveCard: {
     padding: 18,
     marginBottom: 12,
   },
-  prospectiveHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-    gap: 10,
+  heroCard: {
+    padding: 24,
+    marginBottom: 16,
+    borderColor: colors.accentSoftBorder,
+  },
+  heroTitle: {
+    fontFamily: fonts.heavy,
+    fontSize: 32,
+    lineHeight: 36,
+    letterSpacing: -0.5,
+    color: colors.text,
+    marginTop: 8,
+  },
+  heroDetail: {
+    fontFamily: fonts.monoSemiBold,
+    fontSize: 15,
+    color: colors.textMid,
+    marginTop: 8,
+    marginBottom: 16,
   },
   prospectiveTitle: {
     fontFamily: fonts.monoSemiBold,
     fontSize: 14,
     color: colors.text,
-    flexShrink: 1,
-    textAlign: 'right',
   },
   summaryHeader: {
     alignItems: 'center',

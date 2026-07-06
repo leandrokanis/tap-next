@@ -21,8 +21,17 @@ export async function loadSnapshot(): Promise<EngineState | null> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM kv WHERE key = ?', KEY);
   if (!row) return null;
+  return parseSnapshot(row.value);
+}
+
+/**
+ * Snapshots written before the leadin phase existed lack `leadinSeconds` —
+ * hydrate them with 0 (mirror of the Swift decoder's default).
+ */
+export function parseSnapshot(value: string): EngineState | null {
   try {
-    return JSON.parse(row.value) as EngineState;
+    const state = JSON.parse(value) as EngineState;
+    return { ...state, leadinSeconds: state.leadinSeconds ?? 0 };
   } catch {
     return null;
   }

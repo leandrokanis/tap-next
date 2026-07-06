@@ -17,6 +17,8 @@ final class SessionViewModel: ObservableObject {
     private var lastPhaseIndex = -1
     /// Fase de descanso que já teve o háptico de "zerou" (RF-02b).
     private var restSignaledPhaseIndex = -1
+    /// Último número do count-in que já teve o tick háptico (RF-17).
+    private var lastLeadinCount = -1
 
     private let snapshotURL: URL = {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -104,8 +106,21 @@ final class SessionViewModel: ObservableObject {
         state = ticked
         if ticked.phaseIndex != lastPhaseIndex {
             lastPhaseIndex = ticked.phaseIndex
-            WKInterfaceDevice.current().play(.notification)
+            lastLeadinCount = -1
+            if let haptic = transitionHaptic(from: current, to: ticked) {
+                WKInterfaceDevice.current().play(haptic)
+            }
             saveSnapshot(ticked)
+        }
+        // Count-in 3 → 2 → 1: um tick háptico por segundo do leadin (RF-17).
+        if let phase = SessionEngine.currentPhase(ticked),
+           phase.type == .leadin, ticked.status == .running {
+            let remaining = SessionEngine.phaseRemaining(ticked, at: now) ?? 0
+            let count = max(1, Int(remaining.rounded(.up)))
+            if count != lastLeadinCount {
+                lastLeadinCount = count
+                WKInterfaceDevice.current().play(.click)
+            }
         }
         // Descanso zerou (RF-02b): o motor segura em overtime, então não há
         // mudança de fase — o háptico dispara aqui, uma vez por descanso.
@@ -114,7 +129,7 @@ final class SessionViewModel: ObservableObject {
            restSignaledPhaseIndex != ticked.phaseIndex,
            (SessionEngine.phaseRemaining(ticked, at: now) ?? 1) <= 0 {
             restSignaledPhaseIndex = ticked.phaseIndex
-            WKInterfaceDevice.current().play(.notification)
+            WKInterfaceDevice.current().play(.stop)
         }
         if ticked.status == .finished, SessionEngine.completedAllPhases(ticked) {
             persist(ticked)
@@ -127,12 +142,33 @@ final class SessionViewModel: ObservableObject {
         state = updated
         if updated.phaseIndex != lastPhaseIndex {
             lastPhaseIndex = updated.phaseIndex
-            WKInterfaceDevice.current().play(.notification)
+            lastLeadinCount = -1
+            if let haptic = transitionHaptic(from: current, to: updated) {
+                WKInterfaceDevice.current().play(haptic)
+            }
             saveSnapshot(updated)
         }
         if updated.status == .finished, SessionEngine.completedAllPhases(updated) {
             persist(updated)
         }
+    }
+
+    /// Háptico da transição, derivado da fase que acabou de terminar
+    /// (RF-18, espelho de src/session/sessionEvents.ts): fim de isometria
+    /// `.notification`, "vai" `.directionUp`, início de descanso `.start`.
+    /// Sessão completa fica com o `.success` do persist; entrar numa fase
+    /// por toque explícito é silencioso — o toque é o feedback.
+    private func transitionHaptic(from previous: EngineState, to updated: EngineState) -> WKHaptic? {
+        guard previous.status != .finished else { return nil }
+        if updated.status == .finished, SessionEngine.completedAllPhases(updated) { return nil }
+        guard updated.phaseIndex != previous.phaseIndex,
+              previous.phaseIndex < previous.phases.count else { return nil }
+        let from = previous.phases[previous.phaseIndex]
+        let to = SessionEngine.currentPhase(updated)
+        if from.type == .work, from.mode == .time { return .notification }
+        if from.type == .leadin, to?.type == .work { return .directionUp }
+        if from.type == .work, to?.type == .rest { return .start }
+        return nil
     }
 
     private func persist(_ finished: EngineState) {
@@ -153,6 +189,7 @@ final class SessionViewModel: ObservableObject {
         timer = nil
         lastPhaseIndex = -1
         restSignaledPhaseIndex = -1
+        lastLeadinCount = -1
         state = nil
         isActive = false
         try? FileManager.default.removeItem(at: snapshotURL)
