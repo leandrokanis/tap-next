@@ -1,10 +1,26 @@
 import Foundation
 
+/// Count-in before every timed set (RF-17, ADR 0006). Mirror of
+/// LEADIN_SECONDS in src/engine/phases.ts.
+public let leadinSeconds = 3
+
 /// Mirrors src/engine/phases.ts — behavior changes require a fixture change.
 public func expandPhases(_ workout: Workout) -> [Phase] {
     var phases: [Phase] = []
     for (exerciseIndex, exercise) in workout.exercises.enumerated() {
         for setNumber in 1...exercise.sets {
+            if exercise.mode == .time {
+                phases.append(
+                    Phase(
+                        type: .leadin,
+                        exerciseIndex: exerciseIndex,
+                        setNumber: setNumber,
+                        afterSetNumber: nil,
+                        mode: nil,
+                        duration: leadinSeconds
+                    )
+                )
+            }
             phases.append(
                 Phase(
                     type: .work,

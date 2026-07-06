@@ -17,11 +17,60 @@ public struct EngineState: Codable, Equatable, Sendable {
     public var phaseStartedAt: Double
     public var pausedAt: Double?
     public var pausedSeconds: Double
+    /// Active seconds spent in completed leadin count-ins — preparation
+    /// time, excluded from sessionElapsed like pauses (RF-17, ADR 0006).
+    public var leadinSeconds: Double
     public var finishedAt: Double?
     public var completedSets: [LoggedSet]
     /// Prospective adjustment applied (and cleared) when the next work set
     /// is logged. Set during rest via Digital Crown / steppers (RF-06).
     public var upcomingOverride: UpcomingOverride?
+
+    init(
+        workout: Workout,
+        phases: [Phase],
+        phaseIndex: Int,
+        status: EngineStatus,
+        startedAt: Double,
+        phaseStartedAt: Double,
+        pausedAt: Double?,
+        pausedSeconds: Double,
+        leadinSeconds: Double,
+        finishedAt: Double?,
+        completedSets: [LoggedSet],
+        upcomingOverride: UpcomingOverride?
+    ) {
+        self.workout = workout
+        self.phases = phases
+        self.phaseIndex = phaseIndex
+        self.status = status
+        self.startedAt = startedAt
+        self.phaseStartedAt = phaseStartedAt
+        self.pausedAt = pausedAt
+        self.pausedSeconds = pausedSeconds
+        self.leadinSeconds = leadinSeconds
+        self.finishedAt = finishedAt
+        self.completedSets = completedSets
+        self.upcomingOverride = upcomingOverride
+    }
+
+    /// Snapshots written before the leadin phase existed lack
+    /// `leadinSeconds` — hydrate them with 0 (mirror of the TS loader).
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        workout = try container.decode(Workout.self, forKey: .workout)
+        phases = try container.decode([Phase].self, forKey: .phases)
+        phaseIndex = try container.decode(Int.self, forKey: .phaseIndex)
+        status = try container.decode(EngineStatus.self, forKey: .status)
+        startedAt = try container.decode(Double.self, forKey: .startedAt)
+        phaseStartedAt = try container.decode(Double.self, forKey: .phaseStartedAt)
+        pausedAt = try container.decodeIfPresent(Double.self, forKey: .pausedAt)
+        pausedSeconds = try container.decode(Double.self, forKey: .pausedSeconds)
+        leadinSeconds = try container.decodeIfPresent(Double.self, forKey: .leadinSeconds) ?? 0
+        finishedAt = try container.decodeIfPresent(Double.self, forKey: .finishedAt)
+        completedSets = try container.decode([LoggedSet].self, forKey: .completedSets)
+        upcomingOverride = try container.decodeIfPresent(UpcomingOverride.self, forKey: .upcomingOverride)
+    }
 }
 
 public enum SessionEngine {
@@ -35,6 +84,7 @@ public enum SessionEngine {
             phaseStartedAt: at,
             pausedAt: nil,
             pausedSeconds: 0,
+            leadinSeconds: 0,
             finishedAt: nil,
             completedSets: [],
             upcomingOverride: nil
@@ -65,6 +115,8 @@ public enum SessionEngine {
         return max(0, phaseElapsed(state, at: at) - Double(duration))
     }
 
+    /// Active session duration — pauses and leadin count-ins excluded, the
+    /// session clock holds still during a count-in (RF-17).
     public static func sessionElapsed(_ state: EngineState, at: Double) -> Double {
         let reference: Double
         switch state.status {
@@ -72,7 +124,17 @@ public enum SessionEngine {
         case .paused: reference = state.pausedAt!
         case .running: reference = at
         }
-        return max(0, reference - state.startedAt - state.pausedSeconds)
+        let base = reference - state.startedAt - state.pausedSeconds - state.leadinSeconds
+        return max(0, base - liveLeadinSeconds(state, at: at))
+    }
+
+    /// Active time in an in-flight leadin, so the exclusion applies live.
+    private static func liveLeadinSeconds(_ state: EngineState, at: Double) -> Double {
+        guard currentPhase(state)?.type == .leadin else { return 0 }
+        if state.status == .finished {
+            return max(0, state.finishedAt! - state.phaseStartedAt)
+        }
+        return phaseElapsed(state, at: at)
     }
 
     public static func next(_ state: EngineState, at: Double) -> EngineState {
@@ -175,6 +237,9 @@ public enum SessionEngine {
         if phase.type == .work {
             s.completedSets.append(logFor(state, phase: phase, at: at))
             s.upcomingOverride = nil
+        }
+        if phase.type == .leadin {
+            s.leadinSeconds += max(0, completedAt - state.phaseStartedAt)
         }
         s.phaseIndex += 1
         s.phaseStartedAt = completedAt

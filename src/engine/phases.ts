@@ -1,5 +1,20 @@
 import { Workout } from '../domain/workout';
 
+/** Count-in before every timed set (RF-17, ADR 0006). */
+export const LEADIN_SECONDS = 3;
+
+/**
+ * Preparation count-in before a timed work set (3 → 2 → 1 → go). Auto-
+ * advances into its work; logs nothing; excluded from sessionElapsed.
+ */
+export interface LeadinPhase {
+  type: 'leadin';
+  exerciseIndex: number;
+  /** Set the count-in prepares for. 1-based. */
+  setNumber: number;
+  duration: number;
+}
+
 export interface WorkPhase {
   type: 'work';
   exerciseIndex: number;
@@ -19,19 +34,28 @@ export interface RestPhase {
   duration: number;
 }
 
-export type Phase = WorkPhase | RestPhase;
+export type Phase = LeadinPhase | WorkPhase | RestPhase;
 
 /**
  * Expands a workout into the flat phase sequence the engine walks through.
  * Mirrors PhaseExpansion.swift — behavior changes require a fixture change.
  *
  * Rules: restBetweenSets between sets of one exercise; restAfterExercise
- * after its last set when another exercise follows; no trailing rest.
+ * after its last set when another exercise follows; no trailing rest; a
+ * leadin count-in before EVERY timed work set (RF-17).
  */
 export function expandPhases(workout: Workout): Phase[] {
   const phases: Phase[] = [];
   workout.exercises.forEach((ex, exerciseIndex) => {
     for (let setNumber = 1; setNumber <= ex.sets; setNumber++) {
+      if (ex.mode === 'time') {
+        phases.push({
+          type: 'leadin',
+          exerciseIndex,
+          setNumber,
+          duration: LEADIN_SECONDS,
+        });
+      }
       phases.push({
         type: 'work',
         exerciseIndex,

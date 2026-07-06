@@ -1,0 +1,35 @@
+{
+  "name": "leadin de 3s antecede toda série de tempo (inclusive pós-descanso); reps não tem leadin",
+  "workout": {
+    "version": 1,
+    "name": "Costas + core",
+    "exercises": [
+      { "name": "Remada", "mode": "reps", "sets": 1, "reps": 12, "restAfterExercise": 10 },
+      { "name": "Prancha", "mode": "time", "sets": 2, "duration": 30, "restBetweenSets": 15 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "expect": { "status": "running", "phase": "work", "exercise": "Remada", "setNumber": 1, "remaining": null } },
+    { "at": 10, "event": "next" },
+    { "expect": { "phase": "rest", "exercise": "Remada", "remaining": 10, "completedSets": 1 } },
+    { "at": 20, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0 } },
+    { "at": 20, "event": "next" },
+    { "expect": { "phase": "leadin", "exercise": "Prancha", "setNumber": 1, "remaining": 3, "overtime": null } },
+    { "at": 21, "event": "tick" },
+    { "expect": { "phase": "leadin", "remaining": 2, "completedSets": 1 } },
+    { "at": 23, "event": "tick" },
+    { "expect": { "phase": "work", "exercise": "Prancha", "setNumber": 1, "remaining": 30, "elapsed": 0, "completedSets": 1 } },
+    { "at": 53, "event": "tick" },
+    { "expect": { "phase": "rest", "setNumber": 1, "remaining": 15, "completedSets": 2, "lastSet": { "exercise": "Prancha", "setIndex": 1, "durationSeconds": 30 } } },
+    { "at": 68, "event": "tick" },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0 } },
+    { "at": 68, "event": "next" },
+    { "expect": { "phase": "leadin", "exercise": "Prancha", "setNumber": 2, "remaining": 3 } },
+    { "at": 71, "event": "tick" },
+    { "expect": { "phase": "work", "setNumber": 2, "remaining": 30 } },
+    { "at": 101, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 3, "sessionElapsed": 95 } }
+  ]
+}

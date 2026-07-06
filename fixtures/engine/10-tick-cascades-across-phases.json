@@ -1,5 +1,5 @@
 {
-  "name": "tick tardio cascateia works cronometrados sem drift; descanso segura a cascata",
+  "name": "tick tardio cascateia leadin e works cronometrados sem drift; descanso segura a cascata",
   "workout": {
     "version": 1,
     "name": "Fisio core",
@@ -10,16 +10,16 @@
   "steps": [
     { "at": 0, "event": "start" },
     { "at": 100, "event": "tick" },
-    { "expect": { "status": "running", "phase": "rest", "setNumber": 1, "remaining": 0, "overtime": 70, "completedSets": 1, "lastSet": { "setIndex": 1, "durationSeconds": 20 } } },
+    { "expect": { "status": "running", "phase": "rest", "setNumber": 1, "remaining": 0, "overtime": 67, "completedSets": 1, "lastSet": { "setIndex": 1, "durationSeconds": 20 } } },
     { "at": 100, "event": "next" },
-    { "expect": { "phase": "work", "setNumber": 2, "remaining": 20, "elapsed": 0 } },
+    { "expect": { "phase": "leadin", "setNumber": 2, "remaining": 3 } },
     { "at": 125, "event": "tick" },
-    { "expect": { "phase": "rest", "setNumber": 2, "remaining": 5, "overtime": 0, "completedSets": 2, "lastSet": { "setIndex": 2, "durationSeconds": 20 } } },
+    { "expect": { "phase": "rest", "setNumber": 2, "remaining": 8, "overtime": 0, "completedSets": 2, "lastSet": { "setIndex": 2, "durationSeconds": 20 } } },
     { "at": 200, "event": "tick" },
-    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 70 } },
+    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 67 } },
     { "at": 200, "event": "next" },
-    { "expect": { "phase": "work", "setNumber": 3, "remaining": 20 } },
-    { "at": 220, "event": "tick" },
-    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 3, "sessionElapsed": 220, "lastSet": { "setIndex": 3, "durationSeconds": 20 } } }
+    { "expect": { "phase": "leadin", "setNumber": 3, "remaining": 3 } },
+    { "at": 223, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 3, "sessionElapsed": 214, "lastSet": { "setIndex": 3, "durationSeconds": 20 } } }
   ]
 }

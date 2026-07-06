@@ -43,3 +43,30 @@ appId: com.leandrokanis.tapnext
     id: "next-button"
 - assertVisible:
     id: "work-phase"
+#     Quando avanço até o exercício de tempo (Prancha)
+#     Então vejo o count-in 3→2→1 antes da série (RF-17)
+#     Quando toco em COMEÇAR AGORA (pular preparação)
+#     Então a isometria começa
+- tapOn:
+    id: "next-button"
+- tapOn:
+    id: "next-button"
+- tapOn:
+    id: "next-button"
+- tapOn:
+    id: "next-button"
+- tapOn:
+    id: "next-button"
+- tapOn:
+    id: "next-button"
+- tapOn:
+    id: "next-button"
+- tapOn:
+    id: "next-button"
+- assertVisible:
+    id: "leadin-phase"
+- assertVisible: "Prancha"
+- tapOn:
+    id: "next-button"
+- assertVisible:
+    id: "work-phase"

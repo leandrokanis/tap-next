@@ -2,17 +2,50 @@ import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
+import { AlertEvent } from '../session/sessionEvents';
+
 /**
- * Phase-end signals (RF-02): sound + haptic in the foreground, a local
- * notification scheduled for the exact phase boundary when backgrounded.
- * Every call is failure-tolerant — a broken speaker must never break the
- * session. expo-notifications has no web support, so it is loaded lazily
- * and only on native.
+ * Session signals (RF-18): one synthesized sound per event (see
+ * scripts/generate-sounds.js) + a matching haptic in the foreground, a
+ * local notification scheduled for the exact phase boundary when
+ * backgrounded. Every call is failure-tolerant — a broken speaker must
+ * never break the session. expo-notifications has no web support, so it is
+ * loaded lazily and only on native.
  */
 
 type NotificationsModule = typeof import('expo-notifications');
 
-let player: AudioPlayer | null = null;
+/** Event → asset name, the palette contract (tested: no two share a file). */
+export const SOUND_FILES: Record<AlertEvent, string> = {
+  countinTick: 'countin-tick.wav',
+  go: 'go.wav',
+  isometryEnd: 'isometry-end.wav',
+  restStart: 'rest-start.wav',
+  restEnd: 'rest-end.wav',
+  sessionDone: 'session-done.wav',
+};
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const SOUND_MODULES: Record<AlertEvent, number> = {
+  countinTick: require('../../assets/sounds/countin-tick.wav'),
+  go: require('../../assets/sounds/go.wav'),
+  isometryEnd: require('../../assets/sounds/isometry-end.wav'),
+  restStart: require('../../assets/sounds/rest-start.wav'),
+  restEnd: require('../../assets/sounds/rest-end.wav'),
+  sessionDone: require('../../assets/sounds/session-done.wav'),
+};
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+const HAPTICS: Record<AlertEvent, () => Promise<void>> = {
+  countinTick: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+  go: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+  isometryEnd: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+  restStart: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+  restEnd: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
+  sessionDone: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+};
+
+let players: Partial<Record<AlertEvent, AudioPlayer>> = {};
 
 function notifications(): NotificationsModule | null {
   if (Platform.OS === 'web') return null;
@@ -43,20 +76,26 @@ export function initNotifications(): void {
 export async function prepareAudio(): Promise<void> {
   try {
     await setAudioModeAsync({ playsInSilentMode: true });
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    player = createAudioPlayer(require('../../assets/beep.wav'));
+    players = Object.fromEntries(
+      (Object.keys(SOUND_MODULES) as AlertEvent[]).map((event) => [
+        event,
+        createAudioPlayer(SOUND_MODULES[event]),
+      ]),
+    );
   } catch {
-    player = null;
+    players = {};
   }
 }
 
-export function signalPhaseEnd(): void {
+/** Play the event's own sound + haptic (RF-18). */
+export function signal(event: AlertEvent): void {
   try {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    HAPTICS[event]().catch(() => {});
   } catch {
     // haptics unavailable
   }
   try {
+    const player = players[event];
     if (player) {
       player.seekTo(0);
       player.play();

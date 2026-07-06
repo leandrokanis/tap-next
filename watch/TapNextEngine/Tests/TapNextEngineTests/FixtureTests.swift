@@ -108,7 +108,7 @@ final class FixtureTests: XCTestCase {
             XCTAssertEqual(name, exercise, "\(label): exercise")
         }
         if let setNumber = (expected["setNumber"] as? NSNumber)?.intValue {
-            let actual = phase?.type == .work ? phase?.setNumber : phase?.afterSetNumber
+            let actual = phase?.type == .rest ? phase?.afterSetNumber : phase?.setNumber
             XCTAssertEqual(actual, setNumber, "\(label): setNumber")
         }
         if expected.keys.contains("remaining") {

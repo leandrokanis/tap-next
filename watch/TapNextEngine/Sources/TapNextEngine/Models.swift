@@ -55,18 +55,19 @@ public struct Workout: Codable, Equatable, Sendable {
 /// byte-compatible across implementations.
 public struct Phase: Codable, Equatable, Sendable {
     public enum Kind: String, Codable, Sendable {
+        case leadin
         case work
         case rest
     }
 
     public var type: Kind
     public var exerciseIndex: Int
-    /// 1-based; present on work phases.
+    /// 1-based; present on leadin and work phases.
     public var setNumber: Int?
     /// Present on rest phases: the set just performed.
     public var afterSetNumber: Int?
     public var mode: ExerciseMode?
-    /// Seconds; present on rest phases and timed work phases.
+    /// Seconds; present on leadin, rest and timed work phases.
     public var duration: Int?
 }
 

@@ -1,0 +1,16 @@
+{
+  "name": "sem descanso, tick longo cascateia leadin→work→leadin→work e exclui os leadins",
+  "workout": {
+    "version": 1,
+    "name": "Isometrias",
+    "exercises": [
+      { "name": "Prancha", "mode": "time", "sets": 2, "duration": 20, "restBetweenSets": 0 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "expect": { "phase": "leadin", "setNumber": 1, "remaining": 3 } },
+    { "at": 100, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 2, "sessionElapsed": 40, "lastSet": { "setIndex": 2, "durationSeconds": 20 } } }
+  ]
+}

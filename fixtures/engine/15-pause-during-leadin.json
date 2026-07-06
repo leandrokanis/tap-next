@@ -1,0 +1,26 @@
+{
+  "name": "pause durante o leadin congela a contagem; resume retoma de onde parou",
+  "workout": {
+    "version": 1,
+    "name": "Fisio core",
+    "exercises": [
+      { "name": "Prancha", "mode": "time", "sets": 1, "duration": 20 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "expect": { "phase": "leadin", "remaining": 3 } },
+    { "at": 1, "event": "tick" },
+    { "expect": { "phase": "leadin", "remaining": 2 } },
+    { "at": 1, "event": "pause" },
+    { "expect": { "status": "paused", "phase": "leadin", "remaining": 2 } },
+    { "at": 31, "event": "tick" },
+    { "expect": { "status": "paused", "phase": "leadin", "remaining": 2, "sessionElapsed": 0 } },
+    { "at": 31, "event": "resume" },
+    { "expect": { "status": "running", "phase": "leadin", "remaining": 2 } },
+    { "at": 33, "event": "tick" },
+    { "expect": { "phase": "work", "setNumber": 1, "remaining": 20, "sessionElapsed": 0 } },
+    { "at": 53, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 1, "sessionElapsed": 20 } }
+  ]
+}

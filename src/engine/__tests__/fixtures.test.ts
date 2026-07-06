@@ -20,7 +20,7 @@ interface EventStep {
 
 interface Expectation {
   status?: engine.EngineStatus;
-  phase?: 'work' | 'rest' | 'done';
+  phase?: 'leadin' | 'work' | 'rest' | 'done';
   exercise?: string;
   setNumber?: number;
   remaining?: number | null;
@@ -121,7 +121,7 @@ function assertExpectation(
     expect(`${label} exercise=${name}`).toBe(`${label} exercise=${expected.exercise}`);
   }
   if (expected.setNumber !== undefined) {
-    const setNumber = phase?.type === 'work' ? phase.setNumber : phase?.afterSetNumber;
+    const setNumber = phase?.type === 'rest' ? phase.afterSetNumber : phase?.setNumber;
     expect(`${label} setNumber=${setNumber}`).toBe(`${label} setNumber=${expected.setNumber}`);
   }
   if (expected.remaining !== undefined) {

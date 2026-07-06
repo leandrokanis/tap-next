@@ -1,0 +1,18 @@
+{
+  "name": "next durante o leadin pula a preparação e inicia a série imediatamente",
+  "workout": {
+    "version": 1,
+    "name": "Fisio core",
+    "exercises": [
+      { "name": "Prancha", "mode": "time", "sets": 1, "duration": 30 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "expect": { "phase": "leadin", "setNumber": 1, "remaining": 3, "completedSets": 0 } },
+    { "at": 1, "event": "next" },
+    { "expect": { "phase": "work", "setNumber": 1, "remaining": 30, "elapsed": 0, "completedSets": 0 } },
+    { "at": 31, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 1, "sessionElapsed": 30, "lastSet": { "exercise": "Prancha", "setIndex": 1, "durationSeconds": 30 } } }
+  ]
+}

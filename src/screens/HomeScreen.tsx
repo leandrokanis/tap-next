@@ -247,7 +247,7 @@ function resumeBody(
     if (phase.type === 'rest') {
       const following = snapshot.phases[snapshot.phaseIndex + 1];
       const label =
-        following?.type === 'work'
+        following && following.type !== 'rest'
           ? t('session.exerciseSet', {
               exercise: exerciseFor(following.exerciseIndex).name,
               set: following.setNumber,

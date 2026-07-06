@@ -22,8 +22,10 @@
     { "at": 205, "event": "tick" },
     { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 5 } },
     { "at": 205, "event": "next" },
+    { "expect": { "phase": "leadin", "exercise": "Prancha lateral", "setNumber": 1, "remaining": 3 } },
+    { "at": 208, "event": "tick" },
     { "expect": { "phase": "work", "exercise": "Prancha lateral", "setNumber": 1, "remaining": 30 } },
-    { "at": 235, "event": "tick" },
+    { "at": 238, "event": "tick" },
     { "expect": { "status": "finished", "completedAll": true, "completedSets": 3, "sessionElapsed": 235 } }
   ]
 }

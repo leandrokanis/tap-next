@@ -19,8 +19,9 @@ import { EngineState } from '../engine/engine';
 import {
   cancelScheduledNotifications,
   schedulePhaseEndNotification,
-  signalPhaseEnd,
+  signal,
 } from '../services/alerts';
+import { leadinCount, transitionEvent } from './sessionEvents';
 
 const TICK_MS = 250;
 
@@ -56,9 +57,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const [state, setState] = useState<EngineState | null>(null);
   const [now, setNow] = useState(nowSeconds());
-  const phaseIndexRef = useRef<number>(-1);
+  /** Estado anterior, para derivar o evento sonoro da transição (RF-18). */
+  const previousRef = useRef<EngineState | null>(null);
   /** Fase de descanso que já teve o sinal de "zerou" disparado (RF-02b). */
   const restSignaledRef = useRef<number>(-1);
+  /** Último número do count-in que já emitiu tick (RF-17). */
+  const leadinTickedRef = useRef<number | null>(null);
   const stateRef = useRef<EngineState | null>(null);
   stateRef.current = state;
 
@@ -73,23 +77,33 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [state?.status, state !== null]);
 
-  // Phase transitions: signal, snapshot.
+  // Phase transitions: event-specific signal (RF-18), snapshot.
   useEffect(() => {
+    const previous = previousRef.current;
+    previousRef.current = state;
     if (!state) {
-      phaseIndexRef.current = -1;
       restSignaledRef.current = -1;
+      leadinTickedRef.current = null;
       return;
     }
-    if (phaseIndexRef.current === -1) {
-      phaseIndexRef.current = state.phaseIndex;
-      return;
-    }
-    if (state.phaseIndex !== phaseIndexRef.current) {
-      phaseIndexRef.current = state.phaseIndex;
-      signalPhaseEnd();
+    if (!previous || previous === state) return;
+    const event = transitionEvent(previous, state);
+    if (event) signal(event);
+    if (state.phaseIndex !== previous.phaseIndex) {
+      leadinTickedRef.current = null;
       saveSnapshot(state).catch(() => {});
     }
-  }, [state?.phaseIndex, state]);
+  }, [state]);
+
+  // Count-in 3 → 2 → 1: um tick por segundo do leadin (RF-17).
+  useEffect(() => {
+    if (!state) return;
+    const count = leadinCount(state, now);
+    if (count === null) return;
+    if (leadinTickedRef.current === count) return;
+    leadinTickedRef.current = count;
+    signal('countinTick');
+  }, [state, now]);
 
   // Descanso zerou (RF-02b): o motor não avança sozinho, então o fim do
   // descanso não muda phaseIndex — o sinal dispara aqui, uma vez por fase.
@@ -100,7 +114,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (restSignaledRef.current === state.phaseIndex) return;
     if ((engine.phaseRemaining(state, now) ?? 1) > 0) return;
     restSignaledRef.current = state.phaseIndex;
-    signalPhaseEnd();
+    signal('restEnd');
   }, [state, now]);
 
   // Background: schedule a local notification for the current timed phase.
@@ -127,7 +141,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const startSession = useCallback((workout: Workout) => {
     const s = engine.start(workout, nowSeconds());
-    phaseIndexRef.current = s.phaseIndex;
+    previousRef.current = s;
     setState(s);
     saveSnapshot(s).catch(() => {});
   }, []);
@@ -139,7 +153,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       snapshot.status === 'running'
         ? { ...snapshot, status: 'paused' as const, pausedAt: snapshot.phaseStartedAt }
         : snapshot;
-    phaseIndexRef.current = paused.phaseIndex;
+    previousRef.current = paused;
     setState(paused);
   }, []);
 
@@ -217,6 +231,7 @@ function nextUpLabel(
   const following = state.phases[state.phaseIndex + 1];
   if (!following) return '';
   if (following.type === 'rest') return t('session.rest');
+  // leadin and work both name the set they belong to.
   const exercise = state.workout.exercises[following.exerciseIndex];
   return t('session.nextUpSet', { exercise: exercise.name, set: following.setNumber });
 }

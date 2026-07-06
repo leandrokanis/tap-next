@@ -1,0 +1,32 @@
+{
+  "name": "tempo de leadin não conta no sessionElapsed (em curso e acumulado)",
+  "workout": {
+    "version": 1,
+    "name": "Fisio core",
+    "exercises": [
+      { "name": "Prancha", "mode": "time", "sets": 2, "duration": 20, "restBetweenSets": 10 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "expect": { "phase": "leadin", "remaining": 3, "sessionElapsed": 0 } },
+    { "at": 2, "event": "tick" },
+    { "expect": { "phase": "leadin", "remaining": 1, "sessionElapsed": 0 } },
+    { "at": 3, "event": "tick" },
+    { "expect": { "phase": "work", "setNumber": 1, "remaining": 20, "sessionElapsed": 0 } },
+    { "at": 13, "event": "tick" },
+    { "expect": { "phase": "work", "elapsed": 10, "sessionElapsed": 10 } },
+    { "at": 23, "event": "tick" },
+    { "expect": { "phase": "rest", "remaining": 10, "sessionElapsed": 20, "completedSets": 1 } },
+    { "at": 33, "event": "tick" },
+    { "expect": { "phase": "rest", "remaining": 0, "overtime": 0, "sessionElapsed": 30 } },
+    { "at": 33, "event": "next" },
+    { "expect": { "phase": "leadin", "setNumber": 2, "remaining": 3, "sessionElapsed": 30 } },
+    { "at": 35, "event": "tick" },
+    { "expect": { "phase": "leadin", "remaining": 1, "sessionElapsed": 30 } },
+    { "at": 36, "event": "tick" },
+    { "expect": { "phase": "work", "setNumber": 2, "remaining": 20, "sessionElapsed": 30 } },
+    { "at": 56, "event": "tick" },
+    { "expect": { "status": "finished", "phase": "done", "completedAll": true, "completedSets": 2, "sessionElapsed": 50 } }
+  ]
+}

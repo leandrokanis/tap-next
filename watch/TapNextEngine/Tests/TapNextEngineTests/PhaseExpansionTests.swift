@@ -12,13 +12,19 @@ final class PhaseExpansionTests: XCTestCase {
             ]
         )
         let phases = expandPhases(workout)
-        XCTAssertEqual(phases.count, 7)
+        XCTAssertEqual(phases.count, 9)
         XCTAssertEqual(phases[0].type, .work)
         XCTAssertEqual(phases[1].type, .rest)
         XCTAssertEqual(phases[1].duration, 60)
         XCTAssertEqual(phases[3].duration, 120)
-        XCTAssertEqual(phases[4].mode, .time)
-        XCTAssertEqual(phases[4].duration, 30)
+        // Leadin before EVERY timed set (RF-17, ADR 0006).
+        XCTAssertEqual(phases[4].type, .leadin)
+        XCTAssertEqual(phases[4].setNumber, 1)
+        XCTAssertEqual(phases[4].duration, 3)
+        XCTAssertEqual(phases[5].mode, .time)
+        XCTAssertEqual(phases[5].duration, 30)
+        XCTAssertEqual(phases[7].type, .leadin)
+        XCTAssertEqual(phases[7].setNumber, 2)
         XCTAssertEqual(phases.last?.type, .work)
     }
 
