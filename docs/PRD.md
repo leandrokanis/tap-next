@@ -88,6 +88,14 @@ histórico sai como JSON, e nada depende de servidor.
   `parcial`) ou *Descartar*.
 - **RF-08** — Estado da sessão persistido a cada transição de fase; após
   crash/morte do processo, oferecer retomada de onde parou.
+- **RF-17** — Antes de **cada** série de tempo (`mode: time`), uma **contagem
+  de entrada de 3 segundos** (3 → 2 → 1 → vai) evita o início brusco. A
+  contagem sinaliza a cada segundo e um sinal distinto marca o "vai"; esse
+  tempo de preparação **não conta** na duração da sessão.
+- **RF-18** — **Sons diferenciados por evento**: cada momento da sessão tem
+  seu próprio som — contagem de entrada, início do exercício, fim de
+  isometria, início do descanso, fim do descanso e sessão concluída — para o
+  usuário reconhecer o que aconteceu sem olhar a tela.
 
 ### Apple Watch
 
