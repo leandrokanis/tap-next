@@ -1,5 +1,5 @@
 {
-  "name": "encerrar no meio congela a sessão como parcial",
+  "name": "Iniciar próximo no descanso corta o rest e abre a Preparação; overtime só após o prazo original",
   "workout": {
     "version": 1,
     "name": "Pernas A",
@@ -20,30 +20,39 @@
       "event": "start"
     },
     {
-      "at": 2,
+      "at": 0,
       "event": "next"
     },
     {
-      "at": 42,
+      "at": 40,
       "event": "next"
     },
     {
       "expect": {
         "phase": "rest",
-        "completedSets": 1
+        "remaining": 90
       }
     },
     {
-      "at": 60,
-      "event": "finish"
+      "at": 70,
+      "event": "next"
     },
     {
       "expect": {
-        "status": "finished",
-        "phase": "done",
-        "completedSets": 1,
-        "completedAll": false,
-        "sessionElapsed": 60
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 0
+      }
+    },
+    {
+      "at": 140,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 10
       }
     }
   ]

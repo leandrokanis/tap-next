@@ -1,5 +1,5 @@
 {
-  "name": "tick longo cascateia work cronometrado e rest, parando na Preparação",
+  "name": "Encerrar antes numa isometria grava o tempo executado (sem a contagem)",
   "workout": {
     "version": 1,
     "name": "Core",
@@ -23,18 +23,17 @@
       "event": "next"
     },
     {
-      "at": 200,
-      "event": "tick"
+      "at": 21,
+      "event": "next"
     },
     {
       "expect": {
-        "phase": "prepare",
-        "setNumber": 2,
-        "overtime": 152,
+        "phase": "rest",
+        "remaining": 15,
         "completedSets": 1,
         "lastSet": {
           "setIndex": 1,
-          "durationSeconds": 30
+          "durationSeconds": 18
         }
       }
     }

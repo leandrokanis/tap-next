@@ -6,7 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { listWorkouts, saveWorkout } from '../data/workoutRepository';
 import { pushWorkoutsToWatch } from '../data/watchSync';
-import { parseWorkout, ValidationError } from '../domain/workout';
+import { JsonPosition, locateJsonPath, parseWorkout, ValidationError } from '../domain/workout';
 import { RootStackParamList } from '../navigation/types';
 import { BigCTA, Card, MonoLabel, RoundIconButton } from '../ui/components';
 import { showAlert } from '../ui/dialogs';
@@ -29,18 +29,40 @@ const SAMPLE = `{
  * celular. O JSON entra como preview read-only; validação aponta campo,
  * erro de sintaxe aponta posição.
  */
+interface LocatedError extends ValidationError {
+  position: JsonPosition | null;
+}
+
 export default function ImportScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const [text, setText] = useState('');
   const [jsonError, setJsonError] = useState<{ message: string; line?: number; col?: number } | null>(
     null,
   );
-  const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [errors, setErrors] = useState<LocatedError[]>([]);
+  const [workout, setWorkout] = useState<ReturnType<typeof parseWorkout> | null>(null);
 
+  /** Valida ao colar (RF-13): erro aparece inline, Importar só habilita limpo. */
   const setContent = (value: string) => {
     setJsonError(null);
     setErrors([]);
+    setWorkout(null);
     setText(value);
+    if (value.trim() === '') return;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(value);
+    } catch (error) {
+      const message = (error as Error).message;
+      setJsonError({ message, ...positionFrom(message, value) });
+      return;
+    }
+    const result = parseWorkout(parsed);
+    if (!result.ok) {
+      setErrors(result.errors.map((e) => ({ ...e, position: locateJsonPath(value, e.path) })));
+      return;
+    }
+    setWorkout(result);
   };
 
   const handlePaste = async () => {
@@ -49,30 +71,22 @@ export default function ImportScreen({ navigation }: Props) {
   };
 
   const handleImport = async () => {
-    setJsonError(null);
-    setErrors([]);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch (error) {
-      const message = (error as Error).message;
-      setJsonError({ message, ...positionFrom(message, text) });
-      return;
-    }
-    const result = parseWorkout(parsed);
-    if (!result.ok) {
-      setErrors(result.errors);
-      return;
-    }
-    await saveWorkout(result.workout);
+    if (!workout || !workout.ok) return;
+    await saveWorkout(workout.workout);
     const all = await listWorkouts();
     pushWorkoutsToWatch(all.map((w) => w.workout));
-    showAlert(t('import.success', { name: result.workout.name }));
+    showAlert(t('import.success', { name: workout.workout.name }));
     navigation.goBack();
   };
 
   const errorCount = errors.length + (jsonError ? 1 : 0);
   const empty = text.trim() === '';
+  const errorLines = new Set(
+    [
+      jsonError?.line,
+      ...errors.map((e) => e.position?.line),
+    ].filter((l): l is number => l !== undefined),
+  );
 
   return (
     <View style={styles.container} testID="import-screen">
@@ -91,7 +105,16 @@ export default function ImportScreen({ navigation }: Props) {
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ padding: spacing.m }}>
-            <Text style={styles.previewText}>{text}</Text>
+            <Text style={styles.previewText}>
+              {text.split('\n').map((line, i) => (
+                <Text
+                  key={i}
+                  style={errorLines.has(i + 1) ? styles.previewErrorLine : undefined}
+                >
+                  {(i > 0 ? '\n' : '') + line}
+                </Text>
+              ))}
+            </Text>
           </ScrollView>
         )}
       </Card>
@@ -113,10 +136,17 @@ export default function ImportScreen({ navigation }: Props) {
               </View>
             )}
             {errors.map((e) => (
-              <Text key={e.path + e.code} style={[styles.errorText, { marginTop: 6 }]}>
-                {e.path ? `${e.path} — ` : ''}
-                {t(`validation.${e.code}`)}
-              </Text>
+              <View key={e.path + e.code} style={{ marginTop: 6 }}>
+                <Text style={styles.errorText}>
+                  {e.path ? `${e.path} — ` : ''}
+                  {t(`validation.${e.code}`)}
+                </Text>
+                {e.position ? (
+                  <MonoLabel size={11} style={{ marginTop: 2 }}>
+                    {t('import.lineCol', { line: e.position.line, col: e.position.column })}
+                  </MonoLabel>
+                ) : null}
+              </View>
             ))}
           </ScrollView>
         </View>
@@ -144,7 +174,7 @@ export default function ImportScreen({ navigation }: Props) {
       <BigCTA
         label={t('import.action')}
         height={68}
-        variant={empty ? 'disabled' : 'primary'}
+        variant={empty || errorCount > 0 ? 'disabled' : 'primary'}
         onPress={handleImport}
         testID="do-import"
       />
@@ -209,6 +239,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 20,
     color: colors.textMid,
+  },
+  previewErrorLine: {
+    backgroundColor: colors.dangerSoftBg,
+    color: colors.text,
   },
   errorCard: {
     backgroundColor: colors.dangerSoftBg,

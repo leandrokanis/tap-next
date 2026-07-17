@@ -231,16 +231,16 @@ layout não muda entre fases, só o palco.
 
 ### v2.0 (este PRD — protótipo v2.1)
 
-- [ ] Motor: estado de Preparação antes de toda série, transição automática
+- [x] Motor: estado de Preparação antes de toda série, transição automática
       descanso→Preparação, overtime na Preparação, corte de descanso,
       contagem de entrada 3-2-1, duração relógio-de-parede
       (fixtures + TS + Swift em lockstep)
-- [ ] iPhone: anatomia única de sessão (palco trocável), telas de Preparação
+- [x] iPhone: anatomia única de sessão (palco trocável), telas de Preparação
       e Descanso novas, progresso gráfico, Resumo (RF-20)
-- [ ] iPhone: importação paste-only com erro inline (linha/coluna)
-- [ ] Watch: paridade das telas de sessão (RF-21), coroa na Preparação
-- [ ] Sons por evento atualizados (RF-18)
-- [ ] i18n + E2E Maestro das telas novas
+- [x] iPhone: importação paste-only com erro inline (linha/coluna)
+- [x] Watch: paridade das telas de sessão (RF-21), coroa na Preparação
+- [x] Sons por evento atualizados (RF-18)
+- [x] i18n + E2E Maestro das telas novas
 
 ### Backlog (pós-v2)
 

@@ -1,4 +1,4 @@
-import { parseWorkout } from '../workout';
+import { locateJsonPath, parseWorkout } from '../workout';
 
 const valid = {
   version: 1,
@@ -76,5 +76,37 @@ describe('parseWorkout', () => {
       expect(result.errors).toContainEqual({ path: 'exercises[0].reps', code: 'notPositive' });
       expect(result.errors).toContainEqual({ path: 'exercises[0].weight', code: 'negative' });
     }
+  });
+});
+
+describe('locateJsonPath (RF-13 — erro com linha/coluna)', () => {
+  const text = `{
+  "name": "Pernas A",
+  "exercises": [
+    { "name": "Agachamento",
+      "mode": "reps", "sets": 3,
+      "reps": 10, "load": 60, "rest": 90 },
+    { "name": "Leg press",
+      "mode": "reps", "sets": 0,
+      "reps": 12 }
+  ]
+}`;
+
+  it('aponta linha e coluna do valor no caminho', () => {
+    const pos = locateJsonPath(text, 'exercises[1].sets');
+    expect(pos).toEqual({ line: 8, column: 31 });
+  });
+
+  it('aponta o container quando o campo não existe', () => {
+    const pos = locateJsonPath(text, 'exercises[1].mode2');
+    expect(pos).toEqual({ line: 7, column: 5 });
+  });
+
+  it('aponta a raiz para caminho vazio', () => {
+    expect(locateJsonPath(text, '')).toEqual({ line: 1, column: 1 });
+  });
+
+  it('retorna null para texto que não é JSON', () => {
+    expect(locateJsonPath('not json', 'a.b')).toBeNull();
   });
 });

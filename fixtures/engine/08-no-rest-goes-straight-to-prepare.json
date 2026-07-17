@@ -1,16 +1,14 @@
 {
-  "name": "encerrar no meio congela a sessão como parcial",
+  "name": "sem descanso: work vai direto à Preparação seguinte, sem overtime",
   "workout": {
     "version": 1,
-    "name": "Pernas A",
+    "name": "X",
     "exercises": [
       {
-        "name": "Agachamento",
+        "name": "A",
         "mode": "reps",
-        "sets": 3,
-        "reps": 10,
-        "weight": 60,
-        "restBetweenSets": 90
+        "sets": 2,
+        "reps": 15
       }
     ]
   },
@@ -20,30 +18,34 @@
       "event": "start"
     },
     {
-      "at": 2,
+      "at": 0,
       "event": "next"
     },
     {
-      "at": 42,
+      "at": 30,
       "event": "next"
     },
     {
       "expect": {
-        "phase": "rest",
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": null,
         "completedSets": 1
       }
     },
     {
+      "at": 35,
+      "event": "next"
+    },
+    {
       "at": 60,
-      "event": "finish"
+      "event": "next"
     },
     {
       "expect": {
         "status": "finished",
-        "phase": "done",
-        "completedSets": 1,
-        "completedAll": false,
-        "sessionElapsed": 60
+        "completedAll": true,
+        "completedSets": 2
       }
     }
   ]

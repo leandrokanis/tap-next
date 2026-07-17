@@ -14,17 +14,26 @@ public struct EngineState: Codable, Equatable, Sendable {
     public var phaseIndex: Int
     public var status: EngineStatus
     public var startedAt: Double
+    /// Start of the current phase; for timed works this already includes the
+    /// 3 s entry countdown (the phase starts in the future when entered).
     public var phaseStartedAt: Double
     public var pausedAt: Double?
     public var pausedSeconds: Double
     public var finishedAt: Double?
     public var completedSets: [LoggedSet]
     /// Prospective adjustment applied (and cleared) when the next work set
-    /// is logged. Set during rest via Digital Crown / steppers (RF-06).
+    /// is logged. Set during prepare via Digital Crown / pickers (RF-06).
     public var upcomingOverride: UpcomingOverride?
+    /// Original end of the rest preceding the current prepare (ADR 0006).
+    /// Kept even when the rest was cut short; shifted on resume. Nil when
+    /// the prepare has no preceding rest.
+    public var restDeadline: Double?
 }
 
 public enum SessionEngine {
+    /// Entry countdown before every timed set (RF-17): 3 → 2 → 1 → go.
+    public static let countdownSeconds: Double = 3
+
     public static func start(_ workout: Workout, at: Double) -> EngineState {
         EngineState(
             workout: workout,
@@ -37,13 +46,20 @@ public enum SessionEngine {
             pausedSeconds: 0,
             finishedAt: nil,
             completedSets: [],
-            upcomingOverride: nil
+            upcomingOverride: nil,
+            restDeadline: nil
         )
     }
 
     public static func currentPhase(_ state: EngineState) -> Phase? {
         guard state.phaseIndex < state.phases.count else { return nil }
         return state.phases[state.phaseIndex]
+    }
+
+    /// Duration of a timed work phase with any prospective override applied.
+    private static func effectiveWorkDuration(_ state: EngineState, phase: Phase) -> Int? {
+        guard phase.type == .work, phase.mode == .time else { return nil }
+        return state.upcomingOverride?.duration ?? phase.duration
     }
 
     public static func phaseElapsed(_ state: EngineState, at: Double) -> Double {
@@ -53,16 +69,36 @@ public enum SessionEngine {
     }
 
     public static func phaseRemaining(_ state: EngineState, at: Double) -> Double? {
-        guard let duration = currentPhase(state)?.duration else { return nil }
+        guard let phase = currentPhase(state) else { return nil }
+        let duration: Int?
+        switch phase.type {
+        case .work: duration = effectiveWorkDuration(state, phase: phase)
+        case .rest: duration = phase.duration
+        case .prepare: duration = nil
+        }
+        guard let duration else { return nil }
         return max(0, Double(duration) - phaseElapsed(state, at: at))
     }
 
-    /// Seconds past a rest's prescribed duration (RF-02b). 0 while the rest
-    /// is still counting down; nil outside a rest phase.
+    /// Seconds left in the 3-2-1 entry countdown of a timed set (RF-17);
+    /// 0 once the set is running, nil outside work phases.
+    public static func countdownRemaining(_ state: EngineState, at: Double) -> Double? {
+        guard state.status != .finished else { return nil }
+        guard let phase = currentPhase(state), phase.type == .work else { return nil }
+        let reference = state.status == .paused ? state.pausedAt! : at
+        return max(0, state.phaseStartedAt - reference)
+    }
+
+    /// Overtime (RF-19 / ADR 0006): seconds past the original end of the
+    /// rest preceding the current prepare. Nil without a preceding rest.
     public static func phaseOvertime(_ state: EngineState, at: Double) -> Double? {
-        guard let phase = currentPhase(state), phase.type == .rest,
-              let duration = phase.duration else { return nil }
-        return max(0, phaseElapsed(state, at: at) - Double(duration))
+        guard state.status != .finished, let phase = currentPhase(state) else { return nil }
+        if phase.type == .rest, let duration = phase.duration {
+            return max(0, phaseElapsed(state, at: at) - Double(duration))
+        }
+        guard phase.type == .prepare, let deadline = state.restDeadline else { return nil }
+        let reference = state.status == .paused ? state.pausedAt! : at
+        return max(0, reference - deadline)
     }
 
     public static func sessionElapsed(_ state: EngineState, at: Double) -> Double {
@@ -75,19 +111,25 @@ public enum SessionEngine {
         return max(0, reference - state.startedAt - state.pausedSeconds)
     }
 
+    /// Manual advance — the single explicit action. In prepare it starts the
+    /// set (Iniciar); in work it completes a reps set or ends a timed set
+    /// early; in rest it cuts the rest short, opening the next prepare.
     public static func next(_ state: EngineState, at: Double) -> EngineState {
         guard state.status == .running else { return state }
         return advance(state, at: at, completedAt: at)
     }
 
-    /// Clock tick. Auto-advances timed WORK phases (isometrics) whose
-    /// duration elapsed. Rests never auto-advance (RF-02b): past their
-    /// boundary they stay put, counting overtime, until an explicit `next`.
+    /// Clock tick. Auto-advances timed WORK phases and rests at their
+    /// boundary (into the next prepare — ADR 0006), cascading with exact
+    /// boundary times. Prepare phases never auto-advance.
     public static func tick(_ state: EngineState, at: Double) -> EngineState {
         var s = state
         while s.status == .running {
-            guard let phase = currentPhase(s), phase.type != .rest,
-                  let duration = phase.duration else { break }
+            guard let phase = currentPhase(s), phase.type != .prepare else { break }
+            let duration = phase.type == .work
+                ? effectiveWorkDuration(s, phase: phase)
+                : phase.duration
+            guard let duration else { break }
             let boundary = s.phaseStartedAt + Double(duration)
             if at < boundary { break }
             s = advance(s, at: boundary, completedAt: boundary)
@@ -111,6 +153,7 @@ public enum SessionEngine {
         s.pausedAt = nil
         s.pausedSeconds += pausedFor
         s.phaseStartedAt += pausedFor
+        if let deadline = s.restDeadline { s.restDeadline = deadline + pausedFor }
         return s
     }
 
@@ -122,18 +165,20 @@ public enum SessionEngine {
         return s
     }
 
-    /// Prospective adjustment (RF-06): merge reps/weight into the pending
-    /// override for the UPCOMING work set. Applied and cleared when that set
-    /// is logged; sets logged with an override are flagged `adjusted`.
+    /// Prospective adjustment (RF-06): merge reps/weight/duration into the
+    /// pending override for the UPCOMING work set. Applied and cleared when
+    /// that set is logged; sets logged with an override are flagged `adjusted`.
     public static func setUpcomingOverride(
         _ state: EngineState,
         reps: Int? = nil,
-        weight: Double? = nil
+        weight: Double? = nil,
+        duration: Int? = nil
     ) -> EngineState {
         var s = state
         var override = s.upcomingOverride ?? UpcomingOverride()
         if let reps { override.reps = reps }
         if let weight { override.weight = weight }
+        if let duration { override.duration = duration }
         s.upcomingOverride = override
         return s
     }
@@ -169,6 +214,9 @@ public enum SessionEngine {
         )
     }
 
+    /// Move past the current phase. `completedAt` becomes the next phase's
+    /// start — shifted by the entry countdown when a prepare opens a timed
+    /// set. Leaving a rest records its original deadline for overtime.
     private static func advance(_ state: EngineState, at: Double, completedAt: Double) -> EngineState {
         guard let phase = currentPhase(state) else { return state }
         var s = state
@@ -176,8 +224,13 @@ public enum SessionEngine {
             s.completedSets.append(logFor(state, phase: phase, at: at))
             s.upcomingOverride = nil
         }
+        s.restDeadline = phase.type == .rest
+            ? state.phaseStartedAt + Double(phase.duration ?? 0)
+            : nil
         s.phaseIndex += 1
-        s.phaseStartedAt = completedAt
+        let nextPhase = s.phaseIndex < s.phases.count ? s.phases[s.phaseIndex] : nil
+        let entersTimedWork = phase.type == .prepare && nextPhase?.type == .work && nextPhase?.mode == .time
+        s.phaseStartedAt = entersTimedWork ? completedAt + countdownSeconds : completedAt
         if s.phaseIndex >= s.phases.count {
             s.status = .finished
             s.finishedAt = completedAt
@@ -200,11 +253,12 @@ public enum SessionEngine {
         if exercise.mode == .reps {
             logged.reps = override?.reps ?? exercise.reps
         } else {
-            let held = min(phaseElapsed(state, at: at), Double(phase.duration ?? 0))
+            let duration = Double(effectiveWorkDuration(state, phase: phase) ?? 0)
+            let held = min(phaseElapsed(state, at: at), duration)
             logged.durationSeconds = Int(held.rounded())
         }
         logged.weight = override?.weight ?? exercise.weight
-        if let override, override.reps != nil || override.weight != nil {
+        if let override, override.reps != nil || override.weight != nil || override.duration != nil {
             logged.adjusted = true
         }
         return logged

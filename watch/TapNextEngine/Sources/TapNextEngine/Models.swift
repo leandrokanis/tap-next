@@ -55,13 +55,14 @@ public struct Workout: Codable, Equatable, Sendable {
 /// byte-compatible across implementations.
 public struct Phase: Codable, Equatable, Sendable {
     public enum Kind: String, Codable, Sendable {
+        case prepare
         case work
         case rest
     }
 
     public var type: Kind
     public var exerciseIndex: Int
-    /// 1-based; present on work phases.
+    /// 1-based; present on prepare/work phases.
     public var setNumber: Int?
     /// Present on rest phases: the set just performed.
     public var afterSetNumber: Int?
@@ -85,10 +86,13 @@ public struct LoggedSet: Codable, Equatable, Sendable {
 public struct UpcomingOverride: Codable, Equatable, Sendable {
     public var reps: Int?
     public var weight: Double?
+    /// Seconds; overrides the duration of the upcoming timed set.
+    public var duration: Int?
 
-    public init(reps: Int? = nil, weight: Double? = nil) {
+    public init(reps: Int? = nil, weight: Double? = nil, duration: Int? = nil) {
         self.reps = reps
         self.weight = weight
+        self.duration = duration
     }
 }
 

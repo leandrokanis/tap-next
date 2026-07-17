@@ -1,0 +1,91 @@
+{
+  "name": "ajuste na Preparação vale para a série que vem — inclusive a 1ª",
+  "workout": {
+    "version": 1,
+    "name": "Pernas A",
+    "exercises": [
+      {
+        "name": "Agachamento",
+        "mode": "reps",
+        "sets": 3,
+        "reps": 10,
+        "weight": 60,
+        "restBetweenSets": 90
+      }
+    ]
+  },
+  "steps": [
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 1
+      }
+    },
+    {
+      "at": 0,
+      "event": "setOverride",
+      "reps": 8,
+      "weight": 55
+    },
+    {
+      "at": 5,
+      "event": "next"
+    },
+    {
+      "at": 45,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "completedSets": 1,
+        "lastSet": {
+          "setIndex": 1,
+          "reps": 8,
+          "weight": 55,
+          "adjusted": true
+        }
+      }
+    },
+    {
+      "at": 50,
+      "event": "setOverride",
+      "reps": 12
+    },
+    {
+      "at": 135,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 0
+      }
+    },
+    {
+      "at": 140,
+      "event": "next"
+    },
+    {
+      "at": 180,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "completedSets": 2,
+        "lastSet": {
+          "setIndex": 2,
+          "reps": 12,
+          "weight": 60,
+          "adjusted": true
+        }
+      }
+    }
+  ]
+}

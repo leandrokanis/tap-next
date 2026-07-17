@@ -12,13 +12,16 @@ final class PhaseExpansionTests: XCTestCase {
             ]
         )
         let phases = expandPhases(workout)
-        XCTAssertEqual(phases.count, 7)
-        XCTAssertEqual(phases[0].type, .work)
-        XCTAssertEqual(phases[1].type, .rest)
-        XCTAssertEqual(phases[1].duration, 60)
-        XCTAssertEqual(phases[3].duration, 120)
-        XCTAssertEqual(phases[4].mode, .time)
-        XCTAssertEqual(phases[4].duration, 30)
+        XCTAssertEqual(phases.count, 11)
+        XCTAssertEqual(phases[0].type, .prepare)
+        XCTAssertEqual(phases[1].type, .work)
+        XCTAssertEqual(phases[2].type, .rest)
+        XCTAssertEqual(phases[2].duration, 60)
+        XCTAssertEqual(phases[5].duration, 120)
+        XCTAssertEqual(phases[6].type, .prepare)
+        XCTAssertEqual(phases[6].mode, .time)
+        XCTAssertEqual(phases[7].mode, .time)
+        XCTAssertEqual(phases[7].duration, 30)
         XCTAssertEqual(phases.last?.type, .work)
     }
 
@@ -28,7 +31,8 @@ final class PhaseExpansionTests: XCTestCase {
             exercises: [Exercise(name: "A", mode: .reps, sets: 3, reps: 15)]
         )
         let phases = expandPhases(workout)
-        XCTAssertEqual(phases.count, 3)
-        XCTAssertTrue(phases.allSatisfy { $0.type == .work })
+        XCTAssertEqual(phases.count, 6)
+        XCTAssertTrue(phases.allSatisfy { $0.type == .work || $0.type == .prepare })
+        XCTAssertEqual(phases.filter { $0.type == .work }.count, 3)
     }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "encerrar no meio congela a sessão como parcial",
+  "name": "descanso zerado abre a Preparação sozinho; overtime conta a partir do zero",
   "workout": {
     "version": 1,
     "name": "Pernas A",
@@ -20,30 +20,31 @@
       "event": "start"
     },
     {
-      "at": 2,
+      "at": 5,
       "event": "next"
     },
     {
-      "at": 42,
+      "at": 45,
       "event": "next"
     },
     {
       "expect": {
         "phase": "rest",
+        "remaining": 90,
         "completedSets": 1
       }
     },
     {
-      "at": 60,
-      "event": "finish"
+      "at": 158,
+      "event": "tick"
     },
     {
       "expect": {
-        "status": "finished",
-        "phase": "done",
-        "completedSets": 1,
-        "completedAll": false,
-        "sessionElapsed": 60
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 23,
+        "sessionElapsed": 158,
+        "completedSets": 1
       }
     }
   ]

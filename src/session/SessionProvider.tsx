@@ -19,7 +19,8 @@ import { EngineState } from '../engine/engine';
 import {
   cancelScheduledNotifications,
   schedulePhaseEndNotification,
-  signalPhaseEnd,
+  SessionEvent,
+  signalEvent,
 } from '../services/alerts';
 
 const TICK_MS = 250;
@@ -35,8 +36,8 @@ interface SessionContextValue {
   next(): void;
   pause(): void;
   resume(): void;
-  /** Ajuste prospectivo do PRÓXIMO set durante o descanso (RF-06). */
-  setUpcomingOverride(patch: { reps?: number; weight?: number }): void;
+  /** Ajuste prospectivo do PRÓXIMO set, feito na Preparação (RF-06). */
+  setUpcomingOverride(patch: { reps?: number; weight?: number; duration?: number }): void;
   /** "Salvar e sair" — persists a (possibly partial) record. */
   finishAndSave(): Promise<SessionRecord>;
   /** Persists a fully-completed session (engine already finished). */
@@ -57,8 +58,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<EngineState | null>(null);
   const [now, setNow] = useState(nowSeconds());
   const phaseIndexRef = useRef<number>(-1);
-  /** Fase de descanso que já teve o sinal de "zerou" disparado (RF-02b). */
-  const restSignaledRef = useRef<number>(-1);
   const stateRef = useRef<EngineState | null>(null);
   stateRef.current = state;
 
@@ -73,11 +72,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [state?.status, state !== null]);
 
-  // Phase transitions: signal, snapshot.
+  // Phase transitions: per-event signal (RF-18), snapshot.
   useEffect(() => {
     if (!state) {
       phaseIndexRef.current = -1;
-      restSignaledRef.current = -1;
       return;
     }
     if (phaseIndexRef.current === -1) {
@@ -86,21 +84,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     if (state.phaseIndex !== phaseIndexRef.current) {
       phaseIndexRef.current = state.phaseIndex;
-      signalPhaseEnd();
+      const event = transitionEvent(state);
+      if (event) signalEvent(event);
       saveSnapshot(state).catch(() => {});
     }
   }, [state?.phaseIndex, state]);
 
-  // Descanso zerou (RF-02b): o motor não avança sozinho, então o fim do
-  // descanso não muda phaseIndex — o sinal dispara aqui, uma vez por fase.
+  // Contagem de entrada 3-2-1 (RF-17): um sinal por segundo + "vai".
+  const countdownRef = useRef<{ phaseIndex: number; last: number }>({ phaseIndex: -1, last: 0 });
   useEffect(() => {
     if (!state || state.status !== 'running') return;
     const phase = engine.currentPhase(state);
-    if (phase?.type !== 'rest') return;
-    if (restSignaledRef.current === state.phaseIndex) return;
-    if ((engine.phaseRemaining(state, now) ?? 1) > 0) return;
-    restSignaledRef.current = state.phaseIndex;
-    signalPhaseEnd();
+    if (phase?.type !== 'work' || phase.mode !== 'time') return;
+    const remaining = Math.ceil(engine.countdownRemaining(state, now) ?? 0);
+    const ref = countdownRef.current;
+    if (ref.phaseIndex !== state.phaseIndex) {
+      countdownRef.current = { phaseIndex: state.phaseIndex, last: remaining };
+      if (remaining > 0) signalEvent('countdownTick');
+      return;
+    }
+    if (remaining === ref.last) return;
+    ref.last = remaining;
+    signalEvent(remaining > 0 ? 'countdownTick' : 'exerciseStart');
   }, [state, now]);
 
   // Background: schedule a local notification for the current timed phase.
@@ -155,9 +160,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setState((current) => (current ? engine.resume(current, nowSeconds()) : current));
   }, []);
 
-  const setUpcomingOverride = useCallback((patch: { reps?: number; weight?: number }) => {
-    setState((current) => (current ? engine.setUpcomingOverride(current, patch) : current));
-  }, []);
+  const setUpcomingOverride = useCallback(
+    (patch: { reps?: number; weight?: number; duration?: number }) => {
+      setState((current) => (current ? engine.setUpcomingOverride(current, patch) : current));
+    },
+    [],
+  );
 
   const persist = useCallback(async (finished: EngineState): Promise<SessionRecord> => {
     const record = engine.summarize(finished, nowSeconds(), {
@@ -208,6 +216,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       {children}
     </SessionContext.Provider>
   );
+}
+
+/**
+ * Which RF-18 event a phase transition produced, derived from the phase the
+ * session just entered and the one before it.
+ */
+function transitionEvent(state: EngineState): SessionEvent | null {
+  if (state.status === 'finished') {
+    return engine.completedAllPhases(state) ? 'sessionDone' : null;
+  }
+  const entered = engine.currentPhase(state);
+  const previous = state.phases[state.phaseIndex - 1];
+  if (!entered) return null;
+  if (entered.type === 'work') {
+    // Timed sets announce themselves via the 3-2-1 countdown effect.
+    return entered.mode === 'time' ? null : 'exerciseStart';
+  }
+  if (entered.type === 'rest') {
+    return previous?.type === 'work' && previous.mode === 'time' ? 'isoEnd' : 'restStart';
+  }
+  // Entered a prepare: the preparation opened (after a rest or directly).
+  return 'restEnd';
 }
 
 function nextUpLabel(
