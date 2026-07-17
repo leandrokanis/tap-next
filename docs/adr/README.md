@@ -10,3 +10,4 @@ aceitas (mudou de ideia → novo ADR que substitui o antigo).
 | [0003](0003-maestro-em-vez-de-playwright.md) | Maestro em vez de Playwright para E2E |
 | [0004](0004-hkworkoutsession-no-watch.md) | HKWorkoutSession para manter a sessão viva no Watch |
 | [0005](0005-sync-append-only-watchconnectivity.md) | Sync append-only via WatchConnectivity |
+| [0006](0006-preparacao-como-fase-do-motor.md) | Preparação como fase do motor; descanso auto-avança para ela |
