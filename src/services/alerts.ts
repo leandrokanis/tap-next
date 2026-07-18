@@ -3,16 +3,47 @@ import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
 /**
- * Phase-end signals (RF-02): sound + haptic in the foreground, a local
- * notification scheduled for the exact phase boundary when backgrounded.
- * Every call is failure-tolerant — a broken speaker must never break the
- * session. expo-notifications has no web support, so it is loaded lazily
- * and only on native.
+ * Session signals (RF-18): every moment of the session has its own sound —
+ * entry countdown, exercise start, isometry end, rest start, rest end
+ * (preparation opens) and session done — so the user recognizes what
+ * happened without looking at the screen. Sound + haptic in the foreground,
+ * a local notification scheduled for the exact phase boundary when
+ * backgrounded. Every call is failure-tolerant — a broken speaker must
+ * never break the session. expo-notifications has no web support, so it is
+ * loaded lazily and only on native.
  */
+
+export type SessionEvent =
+  | 'countdownTick'
+  | 'exerciseStart'
+  | 'isoEnd'
+  | 'restStart'
+  | 'restEnd'
+  | 'sessionDone';
 
 type NotificationsModule = typeof import('expo-notifications');
 
-let player: AudioPlayer | null = null;
+/* eslint-disable @typescript-eslint/no-require-imports */
+const SOUND_SOURCES: Record<SessionEvent, number> = {
+  countdownTick: require('../../assets/sounds/countdown-tick.wav'),
+  exerciseStart: require('../../assets/sounds/go.wav'),
+  isoEnd: require('../../assets/sounds/iso-end.wav'),
+  restStart: require('../../assets/sounds/rest-start.wav'),
+  restEnd: require('../../assets/sounds/rest-end.wav'),
+  sessionDone: require('../../assets/sounds/session-done.wav'),
+};
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+const HAPTICS: Record<SessionEvent, () => Promise<unknown>> = {
+  countdownTick: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+  exerciseStart: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+  isoEnd: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+  restStart: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+  restEnd: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
+  sessionDone: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+};
+
+const players = new Map<SessionEvent, AudioPlayer>();
 
 function notifications(): NotificationsModule | null {
   if (Platform.OS === 'web') return null;
@@ -43,20 +74,23 @@ export function initNotifications(): void {
 export async function prepareAudio(): Promise<void> {
   try {
     await setAudioModeAsync({ playsInSilentMode: true });
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    player = createAudioPlayer(require('../../assets/beep.wav'));
+    for (const [event, source] of Object.entries(SOUND_SOURCES) as [SessionEvent, number][]) {
+      players.set(event, createAudioPlayer(source));
+    }
   } catch {
-    player = null;
+    players.clear();
   }
 }
 
-export function signalPhaseEnd(): void {
+/** Plays the event's sound + haptic (RF-18). */
+export function signalEvent(event: SessionEvent): void {
   try {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    HAPTICS[event]().catch(() => {});
   } catch {
     // haptics unavailable
   }
   try {
+    const player = players.get(event);
     if (player) {
       player.seekTo(0);
       player.play();

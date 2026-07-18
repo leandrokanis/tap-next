@@ -1,0 +1,51 @@
+{
+  "name": "descanso zerado abre a Preparação sozinho; overtime conta a partir do zero",
+  "workout": {
+    "version": 1,
+    "name": "Pernas A",
+    "exercises": [
+      {
+        "name": "Agachamento",
+        "mode": "reps",
+        "sets": 3,
+        "reps": 10,
+        "weight": 60,
+        "restBetweenSets": 90
+      }
+    ]
+  },
+  "steps": [
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "at": 5,
+      "event": "next"
+    },
+    {
+      "at": 45,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "remaining": 90,
+        "completedSets": 1
+      }
+    },
+    {
+      "at": 158,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 23,
+        "sessionElapsed": 158,
+        "completedSets": 1
+      }
+    }
+  ]
+}

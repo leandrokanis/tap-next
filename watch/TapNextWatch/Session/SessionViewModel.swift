@@ -15,8 +15,8 @@ final class SessionViewModel: ObservableObject {
     private let workoutController = WorkoutSessionController()
     private var timer: Timer?
     private var lastPhaseIndex = -1
-    /// Fase de descanso que já teve o háptico de "zerou" (RF-02b).
-    private var restSignaledPhaseIndex = -1
+    /// Último valor inteiro da contagem 3-2-1 sinalizado (RF-17).
+    private var lastCountdown = -1
 
     private let snapshotURL: URL = {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -72,9 +72,9 @@ final class SessionViewModel: ObservableObject {
     func pause() { mutate { SessionEngine.pause($0, at: self.epochNow()) } }
     func resume() { mutate { SessionEngine.resume($0, at: self.epochNow()) } }
 
-    /// Ajuste prospectivo do PRÓXIMO set durante o descanso (RF-06).
-    func setUpcomingOverride(reps: Int? = nil, weight: Double? = nil) {
-        mutate { SessionEngine.setUpcomingOverride($0, reps: reps, weight: weight) }
+    /// Ajuste prospectivo do PRÓXIMO set, feito na Preparação (RF-06).
+    func setUpcomingOverride(reps: Int? = nil, weight: Double? = nil, duration: Int? = nil) {
+        mutate { SessionEngine.setUpcomingOverride($0, reps: reps, weight: weight, duration: duration) }
     }
 
     /// "Salvar e sair" — partial record straight to the outbox.
@@ -104,21 +104,52 @@ final class SessionViewModel: ObservableObject {
         state = ticked
         if ticked.phaseIndex != lastPhaseIndex {
             lastPhaseIndex = ticked.phaseIndex
-            WKInterfaceDevice.current().play(.notification)
+            playTransitionHaptic(ticked)
             saveSnapshot(ticked)
         }
-        // Descanso zerou (RF-02b): o motor segura em overtime, então não há
-        // mudança de fase — o háptico dispara aqui, uma vez por descanso.
-        if let phase = SessionEngine.currentPhase(ticked),
-           phase.type == .rest,
-           restSignaledPhaseIndex != ticked.phaseIndex,
-           (SessionEngine.phaseRemaining(ticked, at: now) ?? 1) <= 0 {
-            restSignaledPhaseIndex = ticked.phaseIndex
-            WKInterfaceDevice.current().play(.notification)
-        }
+        signalCountdownIfNeeded(ticked)
         if ticked.status == .finished, SessionEngine.completedAllPhases(ticked) {
             persist(ticked)
         }
+    }
+
+    /// Hápticos por evento (RF-18): cada momento tem seu próprio sinal.
+    private func playTransitionHaptic(_ state: EngineState) {
+        guard let entered = SessionEngine.currentPhase(state) else {
+            WKInterfaceDevice.current().play(.success)
+            return
+        }
+        let previous = state.phaseIndex > 0 ? state.phases[state.phaseIndex - 1] : nil
+        switch entered.type {
+        case .work:
+            // Séries de tempo se anunciam pela contagem 3-2-1.
+            if entered.mode != .time { WKInterfaceDevice.current().play(.start) }
+        case .rest:
+            let wasTimed = previous?.type == .work && previous?.mode == .time
+            WKInterfaceDevice.current().play(wasTimed ? .success : .directionDown)
+        case .prepare:
+            WKInterfaceDevice.current().play(.directionUp)
+        }
+    }
+
+    /// Contagem de entrada 3-2-1 (RF-17): um clique por segundo + start no "vai".
+    private func signalCountdownIfNeeded(_ state: EngineState) {
+        guard let phase = SessionEngine.currentPhase(state),
+              phase.type == .work, phase.mode == .time,
+              let remaining = SessionEngine.countdownRemaining(state, at: now)
+        else {
+            lastCountdown = -1
+            return
+        }
+        let step = Int(remaining.rounded(.up))
+        if lastCountdown == -1 {
+            lastCountdown = step
+            if step > 0 { WKInterfaceDevice.current().play(.click) }
+            return
+        }
+        guard step != lastCountdown else { return }
+        lastCountdown = step
+        WKInterfaceDevice.current().play(step > 0 ? .click : .start)
     }
 
     private func mutate(_ transform: (EngineState) -> EngineState) {
@@ -127,7 +158,7 @@ final class SessionViewModel: ObservableObject {
         state = updated
         if updated.phaseIndex != lastPhaseIndex {
             lastPhaseIndex = updated.phaseIndex
-            WKInterfaceDevice.current().play(.notification)
+            playTransitionHaptic(updated)
             saveSnapshot(updated)
         }
         if updated.status == .finished, SessionEngine.completedAllPhases(updated) {
@@ -152,7 +183,7 @@ final class SessionViewModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         lastPhaseIndex = -1
-        restSignaledPhaseIndex = -1
+        lastCountdown = -1
         state = nil
         isActive = false
         try? FileManager.default.removeItem(at: snapshotURL)

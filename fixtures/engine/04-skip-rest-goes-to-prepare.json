@@ -1,0 +1,59 @@
+{
+  "name": "Iniciar próximo no descanso corta o rest e abre a Preparação; overtime só após o prazo original",
+  "workout": {
+    "version": 1,
+    "name": "Pernas A",
+    "exercises": [
+      {
+        "name": "Agachamento",
+        "mode": "reps",
+        "sets": 3,
+        "reps": 10,
+        "weight": 60,
+        "restBetweenSets": 90
+      }
+    ]
+  },
+  "steps": [
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "at": 0,
+      "event": "next"
+    },
+    {
+      "at": 40,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "remaining": 90
+      }
+    },
+    {
+      "at": 70,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 0
+      }
+    },
+    {
+      "at": 140,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 10
+      }
+    }
+  ]
+}

@@ -1,10 +1,21 @@
 import Foundation
 
 /// Mirrors src/engine/phases.ts — behavior changes require a fixture change.
+/// Every set is preceded by a `prepare` phase (ADR 0006).
 public func expandPhases(_ workout: Workout) -> [Phase] {
     var phases: [Phase] = []
     for (exerciseIndex, exercise) in workout.exercises.enumerated() {
         for setNumber in 1...exercise.sets {
+            phases.append(
+                Phase(
+                    type: .prepare,
+                    exerciseIndex: exerciseIndex,
+                    setNumber: setNumber,
+                    afterSetNumber: nil,
+                    mode: exercise.mode,
+                    duration: nil
+                )
+            )
             phases.append(
                 Phase(
                     type: .work,

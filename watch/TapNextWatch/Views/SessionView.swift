@@ -34,10 +34,10 @@ struct SessionView: View {
         ScrollView {
             VStack(spacing: 8) {
                 if let phase {
-                    if phase.type == .work {
-                        workView(state: state, phase: phase)
-                    } else {
-                        restView(state: state, phase: phase)
+                    switch phase.type {
+                    case .prepare: prepareView(state: state, phase: phase)
+                    case .work: workView(state: state, phase: phase)
+                    case .rest: restView(state: state, phase: phase)
                     }
                     cta(state: state, phase: phase)
                 }
@@ -63,7 +63,33 @@ struct SessionView: View {
         }
     }
 
-    // MARK: - Execução (3.1)
+    // MARK: - Preparação (3.1 / 3.5 — RF-19)
+
+    @ViewBuilder
+    private func prepareView(state: EngineState, phase: Phase) -> some View {
+        let exercise = state.workout.exercises[phase.exerciseIndex]
+        let overtime = SessionEngine.phaseOvertime(state, at: model.now) ?? 0
+        VStack(spacing: 4) {
+            HStack {
+                Text("preparation")
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Spacer()
+                if overtime > 0 {
+                    Text("+" + formatted(seconds: overtime))
+                        .font(.system(.caption2, design: .monospaced).weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.warning)
+                }
+            }
+            Text(exercise.name)
+                .font(.system(size: 19, weight: .heavy))
+                .multilineTextAlignment(.center)
+            upcomingEditor(state: state)
+        }
+    }
+
+    // MARK: - Execução (3.2 / 3.3)
 
     @ViewBuilder
     private func workView(state: EngineState, phase: Phase) -> some View {
@@ -87,10 +113,21 @@ struct SessionView: View {
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(Theme.textDim)
             }
-            Text(clock(state: state, phase: phase))
-                .font(.system(size: 54, weight: .heavy, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.white)
+            let countdown = SessionEngine.countdownRemaining(state, at: model.now) ?? 0
+            if countdown > 0 {
+                Text(String(Int(countdown.rounded(.up))))
+                    .font(.system(size: 54, weight: .heavy, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.accent)
+                Text("get_ready")
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(Theme.textDim)
+            } else {
+                Text(clock(state: state, phase: phase))
+                    .font(.system(size: 54, weight: .heavy, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+            }
         }
     }
 
@@ -98,48 +135,25 @@ struct SessionView: View {
 
     @ViewBuilder
     private func restView(state: EngineState, phase: Phase) -> some View {
-        let overtime = SessionEngine.phaseOvertime(state, at: model.now) ?? 0
-        if overtime > 0 {
-            overtimeView(overtime: overtime)
-        } else {
-            VStack(spacing: 6) {
-                HStack {
-                    Text("rest")
-                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                        .foregroundStyle(Theme.accent)
-                    Spacer()
-                }
-                Text(clock(state: state, phase: phase))
-                    .font(.system(size: 46, weight: .heavy, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.accent)
-
-                upcomingEditor(state: state)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func overtimeView(overtime: Double) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             HStack {
-                Text("rest_zeroed")
+                Text("rest")
                     .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(Theme.warning)
+                    .foregroundStyle(Theme.accent)
                 Spacer()
             }
-            Text("+" + formatted(seconds: overtime))
-                .font(.system(size: 56, weight: .heavy, design: .rounded))
+            Text(clock(state: state, phase: phase))
+                .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(Theme.warning)
-            Text("tap_ready")
-                .font(.caption2)
-                .foregroundStyle(Theme.textMid)
+                .foregroundStyle(Theme.accent)
+            Text("rest_zero_opens")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(Theme.textDim)
                 .multilineTextAlignment(.center)
         }
     }
 
-    /// Ajuste prospectivo do PRÓXIMO set pela Digital Crown (RF-06):
+    /// Ajuste da série por vir pela Digital Crown (RF-06), na Preparação:
     /// toque alterna o campo focado, a coroa ajusta.
     @ViewBuilder
     private func upcomingEditor(state: EngineState) -> some View {
@@ -149,10 +163,6 @@ struct SessionView: View {
             if nextPhase.type == .work {
                 let exercise = state.workout.exercises[nextPhase.exerciseIndex]
                 VStack(spacing: 4) {
-                    Text("next_up_set \(nextPhase.setNumber ?? 0) \(exercise.sets)")
-                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                        .foregroundStyle(Theme.accent)
-
                     HStack(spacing: 10) {
                         if exercise.mode == .reps {
                             CrownAdjustableValue(
@@ -160,6 +170,12 @@ struct SessionView: View {
                                 value: Double(state.upcomingOverride?.reps ?? exercise.reps ?? 0),
                                 step: 1
                             ) { model.setUpcomingOverride(reps: max(0, Int($0))) }
+                        } else {
+                            CrownAdjustableValue(
+                                label: "sec",
+                                value: Double(state.upcomingOverride?.duration ?? exercise.duration ?? 0),
+                                step: 5
+                            ) { model.setUpcomingOverride(duration: max(5, Int($0))) }
                         }
                         if exercise.mode == .reps || exercise.weight != nil {
                             CrownAdjustableValue(
@@ -193,13 +209,17 @@ struct SessionView: View {
 
     @ViewBuilder
     private func cta(state: EngineState, phase: Phase) -> some View {
-        let isRest = phase.type == .rest
         let isTimedWork = phase.type == .work && phase.mode == .time
+        let label: LocalizedStringKey = switch phase.type {
+        case .prepare: "start"
+        case .rest: "start_next"
+        case .work: isTimedWork ? "end_early" : "next"
+        }
         Button {
             model.next()
         } label: {
-            Text(isRest ? "start_next" : isTimedWork ? "end_early" : "next")
-                .font(.system(size: isRest ? 14 : 16, weight: .heavy))
+            Text(label)
+                .font(.system(size: phase.type == .rest ? 14 : 16, weight: .heavy))
                 .foregroundStyle(isTimedWork ? Theme.textMid : Theme.onAccent)
                 .frame(maxWidth: .infinity, minHeight: 52)
         }

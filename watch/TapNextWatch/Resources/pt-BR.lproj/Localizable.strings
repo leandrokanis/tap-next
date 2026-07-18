@@ -22,3 +22,8 @@
 "finish_save" = "Salvar e sair";
 "finish_discard" = "Descartar";
 "finish_continue" = "Continuar treino";
+"preparation" = "PREPARAÇÃO";
+"start" = "INICIAR";
+"get_ready" = "PREPARE-SE";
+"sec" = "SEG";
+"rest_zero_opens" = "AO ZERAR, ABRE A PREPARAÇÃO";

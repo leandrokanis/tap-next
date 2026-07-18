@@ -1,33 +1,94 @@
 {
-  "name": "pausa congela o relógio, next é ignorado pausado, resume desloca a fase",
+  "name": "pausa congela cronômetros na execução e o overtime na Preparação",
   "workout": {
     "version": 1,
     "name": "Pernas A",
     "exercises": [
-      { "name": "Agachamento", "mode": "reps", "sets": 2, "reps": 10, "restBetweenSets": 90 }
+      {
+        "name": "Agachamento",
+        "mode": "reps",
+        "sets": 3,
+        "reps": 10,
+        "weight": 60,
+        "restBetweenSets": 90
+      }
     ]
   },
   "steps": [
-    { "at": 0, "event": "start" },
-    { "at": 30, "event": "next" },
-    { "expect": { "phase": "rest", "remaining": 90 } },
-    { "at": 40, "event": "tick" },
-    { "expect": { "phase": "rest", "remaining": 80 } },
-    { "at": 50, "event": "pause" },
-    { "expect": { "status": "paused", "phase": "rest", "remaining": 70, "elapsed": 20 } },
-    { "at": 500, "event": "tick" },
-    { "expect": { "status": "paused", "phase": "rest", "remaining": 70 } },
-    { "at": 505, "event": "next" },
-    { "expect": { "status": "paused", "phase": "rest", "remaining": 70, "completedSets": 1 } },
-    { "at": 510, "event": "resume" },
-    { "expect": { "status": "running", "phase": "rest", "remaining": 70 } },
-    { "at": 520, "event": "tick" },
-    { "expect": { "phase": "rest", "remaining": 60, "sessionElapsed": 60 } },
-    { "at": 580, "event": "tick" },
-    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 0, "sessionElapsed": 120 } },
-    { "at": 600, "event": "tick" },
-    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 20 } },
-    { "at": 600, "event": "next" },
-    { "expect": { "phase": "work", "setNumber": 2, "elapsed": 0, "sessionElapsed": 140 } }
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "at": 5,
+      "event": "next"
+    },
+    {
+      "at": 20,
+      "event": "pause"
+    },
+    {
+      "expect": {
+        "status": "paused",
+        "phase": "work",
+        "elapsed": 15
+      }
+    },
+    {
+      "at": 50,
+      "event": "resume"
+    },
+    {
+      "at": 65,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "sessionElapsed": 35,
+        "completedSets": 1
+      }
+    },
+    {
+      "at": 155,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": 0
+      }
+    },
+    {
+      "at": 160,
+      "event": "pause"
+    },
+    {
+      "expect": {
+        "status": "paused",
+        "overtime": 5
+      }
+    },
+    {
+      "at": 200,
+      "event": "resume"
+    },
+    {
+      "expect": {
+        "status": "running",
+        "overtime": 5
+      }
+    },
+    {
+      "at": 210,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "overtime": 15
+      }
+    }
   ]
 }

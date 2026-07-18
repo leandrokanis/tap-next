@@ -22,3 +22,8 @@
 "finish_save" = "Save and exit";
 "finish_discard" = "Discard";
 "finish_continue" = "Keep training";
+"preparation" = "PREPARATION";
+"start" = "START";
+"get_ready" = "GET READY";
+"sec" = "SEC";
+"rest_zero_opens" = "AT ZERO, PREPARATION OPENS";

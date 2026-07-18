@@ -1,6 +1,6 @@
 # Funcionalidade: Encerrar no meio e histórico
-#   Cenário: salvar uma sessão parcial e encontrá-la no histórico
-#     Dado que estou numa sessão com uma série feita
+#   Cenário: salvar uma sessão parcial (encerrada durante a Preparação)
+#     Dado que estou numa sessão com uma série feita, no descanso→Preparação
 #     Quando toco em ✕ e escolho "Save and exit"
 #     Então volto para a Home
 #     E o histórico mostra a sessão como parcial
@@ -24,8 +24,18 @@ appId: com.leandrokanis.tapnext
     id: "workout-Pernas A"
 - tapOn:
     id: "start-session"
+- assertVisible:
+    id: "prepare-phase"
+- tapOn:
+    id: "prepare-start"
 - tapOn:
     id: "next-button"
+- assertVisible:
+    id: "rest-phase"
+- tapOn:
+    id: "skip-rest"
+- assertVisible:
+    id: "prepare-phase"
 - tapOn:
     id: "finish-button"
 - tapOn: "Save and exit"

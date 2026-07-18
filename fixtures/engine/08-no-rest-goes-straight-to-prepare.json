@@ -1,0 +1,52 @@
+{
+  "name": "sem descanso: work vai direto à Preparação seguinte, sem overtime",
+  "workout": {
+    "version": 1,
+    "name": "X",
+    "exercises": [
+      {
+        "name": "A",
+        "mode": "reps",
+        "sets": 2,
+        "reps": 15
+      }
+    ]
+  },
+  "steps": [
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "at": 0,
+      "event": "next"
+    },
+    {
+      "at": 30,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "setNumber": 2,
+        "overtime": null,
+        "completedSets": 1
+      }
+    },
+    {
+      "at": 35,
+      "event": "next"
+    },
+    {
+      "at": 60,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "status": "finished",
+        "completedAll": true,
+        "completedSets": 2
+      }
+    }
+  ]
+}

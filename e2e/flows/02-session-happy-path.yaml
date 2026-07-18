@@ -1,11 +1,15 @@
-# Funcionalidade: Sessão guiada
-#   Cenário: série por reps avança com o botão Próximo e inicia o descanso
+# Funcionalidade: Sessão guiada v2 (Preparação-first, ADR 0006)
+#   Cenário: toda série passa pela Preparação; descanso sem edição
 #     Dado que importei "Pernas A"
 #     Quando abro o treino e toco em INICIAR
-#     Então vejo o Agachamento na série 1
+#     Então vejo a Preparação do Agachamento (rodas de ajuste)
+#     Quando toco em INICIAR
+#     Então a execução da série 1 começa
 #     Quando toco em PRÓXIMO
-#     Então o descanso começa e o próximo set aparece editável (prospectivo)
+#     Então o descanso começa, com a série gravada e sem edição
 #     Quando toco em INICIAR PRÓXIMO (pular descanso)
+#     Então abre a Preparação da série 2
+#     Quando toco em INICIAR
 #     Então volto para a execução na série 2
 appId: com.leandrokanis.tapnext
 ---
@@ -29,8 +33,12 @@ appId: com.leandrokanis.tapnext
 - assertVisible:
     id: "session-screen"
 - assertVisible:
-    id: "work-phase"
+    id: "prepare-phase"
 - assertVisible: "Agachamento"
+- tapOn:
+    id: "prepare-start"
+- assertVisible:
+    id: "work-phase"
 - tapOn:
     id: "next-button"
 - assertVisible:
@@ -38,8 +46,10 @@ appId: com.leandrokanis.tapnext
 - assertVisible:
     id: "set-log"
 - tapOn:
-    id: "log-reps-minus"
+    id: "skip-rest"
+- assertVisible:
+    id: "prepare-phase"
 - tapOn:
-    id: "next-button"
+    id: "prepare-start"
 - assertVisible:
     id: "work-phase"

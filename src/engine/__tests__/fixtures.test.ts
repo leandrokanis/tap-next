@@ -16,16 +16,19 @@ interface EventStep {
   event: 'start' | 'next' | 'tick' | 'pause' | 'resume' | 'finish' | 'setOverride';
   reps?: number;
   weight?: number;
+  duration?: number;
 }
 
 interface Expectation {
   status?: engine.EngineStatus;
-  phase?: 'work' | 'rest' | 'done';
+  phase?: 'prepare' | 'work' | 'rest' | 'done';
   exercise?: string;
   setNumber?: number;
   remaining?: number | null;
-  /** Seconds past a rest's prescribed duration; null outside rest. */
+  /** Seconds past the preceding rest's deadline (prepare); null without one. */
   overtime?: number | null;
+  /** Seconds left in the 3-2-1 entry countdown of a timed set. */
+  countdown?: number;
   elapsed?: number;
   sessionElapsed?: number;
   completedSets?: number;
@@ -95,7 +98,11 @@ function applyEvent(
     case 'finish':
       return engine.finish(state, at);
     case 'setOverride':
-      return engine.setUpcomingOverride(state, { reps: step.reps, weight: step.weight });
+      return engine.setUpcomingOverride(state, {
+        reps: step.reps,
+        weight: step.weight,
+        duration: step.duration,
+      });
     default:
       throw new Error(`unknown event ${step.event as string}`);
   }
@@ -121,7 +128,7 @@ function assertExpectation(
     expect(`${label} exercise=${name}`).toBe(`${label} exercise=${expected.exercise}`);
   }
   if (expected.setNumber !== undefined) {
-    const setNumber = phase?.type === 'work' ? phase.setNumber : phase?.afterSetNumber;
+    const setNumber = phase?.type === 'rest' ? phase.afterSetNumber : phase?.setNumber;
     expect(`${label} setNumber=${setNumber}`).toBe(`${label} setNumber=${expected.setNumber}`);
   }
   if (expected.remaining !== undefined) {
@@ -133,6 +140,11 @@ function assertExpectation(
     const overtime = engine.phaseOvertime(state, at);
     const rounded = overtime === null ? null : Math.round(overtime);
     expect(`${label} overtime=${rounded}`).toBe(`${label} overtime=${expected.overtime}`);
+  }
+  if (expected.countdown !== undefined) {
+    const countdown = engine.countdownRemaining(state, at);
+    const rounded = countdown === null ? null : Math.round(countdown);
+    expect(`${label} countdown=${rounded}`).toBe(`${label} countdown=${expected.countdown}`);
   }
   if (expected.elapsed !== undefined) {
     const elapsed = Math.round(engine.phaseElapsed(state, at));

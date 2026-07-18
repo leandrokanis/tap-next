@@ -38,6 +38,12 @@ versionado no git (ADR 0001).
    "Add Local…" → selecione `watch/TapNextEngine`. Vincule o produto
    `TapNextEngine` ao target `TapNextWatch`.
 
+5b. **Ícone do app**: a pasta `Resources/` já traz
+   `Assets.xcassets` com o `AppIcon` (mesmo ícone do iPhone). No target
+   `TapNextWatch` → Build Settings → *Asset Catalog App Icon Set Name* =
+   `AppIcon`. Se o Xcode criou um `Assets.xcassets` próprio no target,
+   remova-o e use o versionado.
+
 6. **Capacidades do target `TapNextWatch`**:
    - HealthKit (Signing & Capabilities → + Capability).
    - Background Modes → marque **Workout processing**.

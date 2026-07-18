@@ -80,7 +80,8 @@ final class FixtureTests: XCTestCase {
             return SessionEngine.setUpcomingOverride(
                 current,
                 reps: (step["reps"] as? NSNumber)?.intValue,
-                weight: (step["weight"] as? NSNumber)?.doubleValue
+                weight: (step["weight"] as? NSNumber)?.doubleValue,
+                duration: (step["duration"] as? NSNumber)?.intValue
             )
         default:
             XCTFail("\(label): unknown event \(event)")
@@ -108,7 +109,7 @@ final class FixtureTests: XCTestCase {
             XCTAssertEqual(name, exercise, "\(label): exercise")
         }
         if let setNumber = (expected["setNumber"] as? NSNumber)?.intValue {
-            let actual = phase?.type == .work ? phase?.setNumber : phase?.afterSetNumber
+            let actual = phase?.type == .rest ? phase?.afterSetNumber : phase?.setNumber
             XCTAssertEqual(actual, setNumber, "\(label): setNumber")
         }
         if expected.keys.contains("remaining") {
@@ -126,6 +127,10 @@ final class FixtureTests: XCTestCase {
             } else {
                 XCTAssertEqual(overtime, (expected["overtime"] as? NSNumber)?.intValue, "\(label): overtime")
             }
+        }
+        if let countdown = (expected["countdown"] as? NSNumber)?.intValue {
+            let actual = SessionEngine.countdownRemaining(state, at: at).map { Int($0.rounded()) }
+            XCTAssertEqual(actual, countdown, "\(label): countdown")
         }
         if let elapsed = (expected["elapsed"] as? NSNumber)?.intValue {
             XCTAssertEqual(Int(SessionEngine.phaseElapsed(state, at: at).rounded()), elapsed, "\(label): elapsed")

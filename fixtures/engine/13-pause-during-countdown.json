@@ -1,0 +1,23 @@
+{
+  "name": "pausar durante a contagem 3-2-1 retoma de onde parou",
+  "workout": {
+    "version": 1,
+    "name": "Core",
+    "exercises": [
+      { "name": "Prancha", "mode": "time", "sets": 3, "duration": 30, "restBetweenSets": 15 }
+    ]
+  },
+  "steps": [
+    { "at": 0, "event": "start" },
+    { "at": 0, "event": "next" },
+    { "expect": { "phase": "work", "countdown": 3 } },
+    { "at": 1, "event": "pause" },
+    { "expect": { "status": "paused", "countdown": 2 } },
+    { "at": 11, "event": "resume" },
+    { "expect": { "status": "running", "countdown": 2, "remaining": 30 } },
+    { "at": 13, "event": "tick" },
+    { "expect": { "phase": "work", "countdown": 0, "remaining": 30, "elapsed": 0 } },
+    { "at": 43, "event": "tick" },
+    { "expect": { "phase": "rest", "completedSets": 1, "lastSet": { "durationSeconds": 30 } } }
+  ]
+}

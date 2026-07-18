@@ -101,8 +101,10 @@ export default function HomeScreen({ navigation }: Props) {
     <View style={styles.container} testID="home-screen">
       <View style={styles.header}>
         <Text style={styles.title}>{t('home.title')}</Text>
+        {/* "+" saiu na v2 (criar treino por UI é não-objetivo); o glifo de
+            importar mantém a única rota de entrada de treinos. */}
         <RoundIconButton
-          glyph="+"
+          glyph="↓"
           size={44}
           accent
           bordered

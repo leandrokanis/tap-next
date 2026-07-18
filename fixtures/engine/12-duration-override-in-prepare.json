@@ -1,0 +1,65 @@
+{
+  "name": "ajuste de tempo na Preparação muda a duração efetiva da isometria",
+  "workout": {
+    "version": 1,
+    "name": "Core",
+    "exercises": [
+      {
+        "name": "Prancha",
+        "mode": "time",
+        "sets": 3,
+        "duration": 30,
+        "restBetweenSets": 15
+      }
+    ]
+  },
+  "steps": [
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "at": 0,
+      "event": "setOverride",
+      "duration": 45
+    },
+    {
+      "at": 0,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "work",
+        "countdown": 3,
+        "remaining": 45
+      }
+    },
+    {
+      "at": 40,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "work",
+        "countdown": 0,
+        "remaining": 8
+      }
+    },
+    {
+      "at": 48,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "remaining": 15,
+        "completedSets": 1,
+        "lastSet": {
+          "setIndex": 1,
+          "durationSeconds": 45,
+          "adjusted": true
+        }
+      }
+    }
+  ]
+}

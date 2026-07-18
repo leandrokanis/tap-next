@@ -1,9 +1,11 @@
-# Tap Next — Especificação v1
+# Tap Next — Especificação v2
 
 Companion open source para sessões de musculação e fisioterapia: conduz o treino
 exercício a exercício, com cronômetro, sinal sonoro e registro por série.
 
-Decisões fechadas em entrevista em 2026-07-05.
+Decisões fechadas em entrevista em 2026-07-05; fluxo de sessão v2
+(Preparação-first) fechado em 2026-07-17 (PRD v2.0, protótipo v2.1,
+ADR 0006).
 
 ## 1. Plataformas e arquitetura
 
@@ -61,39 +63,50 @@ versão futura do schema (campo `version` já reservado).
 
 ## 3. Motor de sessão (máquina de estados)
 
-Fases: `work(exercício, série)` → `rest` → … → `done`, com estado de pausa
-sobreposto a qualquer fase.
+Fases (ADR 0006): `prepare(exercício, série)` → `work` → `rest` → … →
+`done`, com pausa sobreposta a qualquer fase. **Toda série é precedida por
+uma `prepare`** — o invariante do produto é "nenhum exercício começa sem um
+toque explícito".
 
+- **Preparação** (`prepare`): sem cronômetro próprio; exibe os valores da
+  série por vir, editáveis (rodas no iPhone, Digital Crown no Watch).
+  **Nunca avança sozinha** — sai pelo **Iniciar**. Quando veio de um
+  descanso zerado, mostra o **overtime** (`max(0, now − restDeadline)`) em
+  âmbar; `restDeadline` é o prazo original do descanso anterior, mantido
+  mesmo se o descanso foi cortado, e deslocado por pausas.
+- **Contagem de entrada** (séries `time`, RF-17): **Iniciar** desloca o
+  início do `work` em 3 s (`phaseStartedAt = at + 3`); a UI lê
+  `countdownRemaining` (3 → 2 → 1 → vai). Os 3 s contam na duração da
+  sessão, não no tempo da série.
 - **Isometria** (`work` com `mode: time`): cronômetro regressivo, **avança
-  sozinha** ao zerar (entrando no descanso), com som (iPhone) e háptico + som
-  (Watch).
-- **Descanso** (`rest`): cronômetro regressivo; ao zerar **não avança
-  sozinho**. Dispara som (iPhone) / háptico + som (Watch) e passa a contar em
-  **overtime** (tempo além do prescrito). Permanece no descanso até um toque
-  explícito iniciar o próximo `work`; a contagem do próximo exercício começa
-  nesse toque, não antes. Isso significa que o motor tem um estado de descanso
-  que persiste após `remaining === 0`, resolvido só por ação do usuário (ou
-  finish).
+  sozinha** ao zerar (entrando no descanso). **Encerrar antes** a conclui
+  com o tempo executado.
+- **Descanso** (`rest`): cronômetro regressivo, **sem edição**; ao zerar
+  **avança sozinho para a `prepare` seguinte** (com sinal). **Iniciar
+  próximo** antes do zero corta o descanso e abre a `prepare` na hora.
 - **Reps** (`work` com `mode: reps`): cronômetro progressivo informativo;
-  avança só pelo **Próximo** (botão grande, alvo de toque generoso).
-- Avanço manual: **Próximo** durante uma isometria a encerra antes; **Iniciar
-  próximo** durante o descanso (running ou em overtime) inicia o próximo
-  `work` de imediato — mesmo botão, encurta o descanso.
-- Pausar / retomar / encerrar disponíveis o tempo todo. Antes de iniciar, a UI
-  lista os exercícios do treino; durante a sessão, sempre exibe o que vem a
-  seguir.
+  avança só pelo **Próximo**.
+- `tick` auto-avança works cronometrados **e** rests, cascateando por
+  boundaries exatos; **para sempre em `prepare`**.
+- Pausar / retomar / encerrar disponíveis o tempo todo. Antes de iniciar, a
+  UI lista os exercícios do treino; durante a sessão, a barra "A SEGUIR"
+  (e "DEPOIS" no descanso) sempre exibe o que vem.
+- Progresso é **gráfico** (RF-01): barra segmentada por exercício + pontos
+  de série; sem "exercício X de Y" / "série X de Y" em texto.
 
 ### Registro por série (prospectivo)
 
-- Tocar **Próximo** ao fim de uma série a **grava automaticamente com o
-  prescrito** (reps e kg) e inicia o descanso imediatamente.
-- Durante o descanso, o que aparece editável é o **próximo** set —
-  pré-preenchido com o prescrito, ajustável ali mesmo (steppers no iPhone,
-  Digital Crown no Watch). O ajuste define o alvo/registro do set que está por
-  vir: o usuário decide a carga/reps **antes** de executá-lo.
-- A primeira série de cada exercício não tem descanso antes dela, então usa
-  sempre o prescrito. Não ajustou ⇒ prescrito vale. O caminho feliz é apenas os
-  toques de avanço (Próximo + Iniciar próximo).
+- Concluir uma série a **grava automaticamente com os valores vigentes**
+  (prescrito ou ajustado).
+- O ajuste acontece na **Preparação** da própria série (RF-06): reps/kg ou
+  tempo, pré-preenchidos com o prescrito. **Toda série é ajustável,
+  inclusive a primeira.** `upcomingOverride` é consumido quando o set é
+  gravado, que sai com `adjusted: true`.
+- Não ajustou ⇒ prescrito vale. O caminho feliz é Iniciar (cada preparação)
+  + Próximo (cada série por reps).
+- A duração da sessão é relógio de parede menos pausas: preparação,
+  overtime e contagem de entrada contam; o tempo gravado de uma série
+  `time` exclui a contagem.
 
 ### Sessão interrompida
 
@@ -150,15 +163,22 @@ Registro por sessão concluída ou parcial:
 
 ## 8. Som e alertas no iPhone
 
-- App em primeiro plano: som (expo-av) + háptico no fim de cada fase.
+- **Sons por evento (RF-18)**: contagem de entrada (tick por segundo),
+  "vai"/início de exercício, fim de isometria, início de descanso, fim de
+  descanso (abertura da Preparação) e sessão concluída — assets distintos em
+  `assets/sounds/`, mapeados em `src/services/alerts.ts` (`signalEvent`);
+  hápticos equivalentes no Watch (`WKHaptic`).
 - App em segundo plano/tela bloqueada: **notificação local agendada** para o
   instante do fim da fase cronometrada (som do sistema), cancelada/reagendada
   a cada mudança de fase, pausa ou pulo.
 
 ## 9. Importação e exportação
 
-- Importar treino (v1): **colar JSON** em campo de texto, com validação e
-  erros claros. (Seletor de arquivos, share sheet e URL: backlog.)
+- Importar treino: **paste-only** — botão único "Colar da área de
+  transferência", pré-visualização somente leitura com **erro inline**
+  (linha destacada) e cartão apontando campo, linha e coluna
+  (`locateJsonPath` em `src/domain/workout.ts`); Importar desabilitado
+  enquanto houver erro. (Seletor de arquivos, share sheet e URL: backlog.)
 - Exportar: treinos e histórico completos em JSON — dado do usuário é do
   usuário.
 

@@ -1,5 +1,13 @@
 import { Workout } from '../domain/workout';
 
+export interface PreparePhase {
+  type: 'prepare';
+  exerciseIndex: number;
+  /** 1-based; the set this preparation precedes. */
+  setNumber: number;
+  mode: 'reps' | 'time';
+}
+
 export interface WorkPhase {
   type: 'work';
   exerciseIndex: number;
@@ -19,19 +27,21 @@ export interface RestPhase {
   duration: number;
 }
 
-export type Phase = WorkPhase | RestPhase;
+export type Phase = PreparePhase | WorkPhase | RestPhase;
 
 /**
  * Expands a workout into the flat phase sequence the engine walks through.
  * Mirrors PhaseExpansion.swift — behavior changes require a fixture change.
  *
- * Rules: restBetweenSets between sets of one exercise; restAfterExercise
- * after its last set when another exercise follows; no trailing rest.
+ * Rules (ADR 0006): every set is preceded by a `prepare` phase;
+ * restBetweenSets between sets of one exercise; restAfterExercise after its
+ * last set when another exercise follows; no trailing rest.
  */
 export function expandPhases(workout: Workout): Phase[] {
   const phases: Phase[] = [];
   workout.exercises.forEach((ex, exerciseIndex) => {
     for (let setNumber = 1; setNumber <= ex.sets; setNumber++) {
+      phases.push({ type: 'prepare', exerciseIndex, setNumber, mode: ex.mode });
       phases.push({
         type: 'work',
         exerciseIndex,

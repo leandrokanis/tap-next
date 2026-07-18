@@ -1,0 +1,41 @@
+{
+  "name": "Encerrar antes numa isometria grava o tempo executado (sem a contagem)",
+  "workout": {
+    "version": 1,
+    "name": "Core",
+    "exercises": [
+      {
+        "name": "Prancha",
+        "mode": "time",
+        "sets": 3,
+        "duration": 30,
+        "restBetweenSets": 15
+      }
+    ]
+  },
+  "steps": [
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "at": 0,
+      "event": "next"
+    },
+    {
+      "at": 21,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "remaining": 15,
+        "completedSets": 1,
+        "lastSet": {
+          "setIndex": 1,
+          "durationSeconds": 18
+        }
+      }
+    }
+  ]
+}

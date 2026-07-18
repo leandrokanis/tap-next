@@ -1,29 +1,75 @@
 {
-  "name": "descanso entre exercícios usa restAfterExercise e some no fim do treino",
+  "name": "descanso após o exercício desemboca na Preparação do próximo exercício",
   "workout": {
     "version": 1,
-    "name": "Costas + core",
+    "name": "Costas",
     "exercises": [
-      { "name": "Remada", "mode": "reps", "sets": 2, "reps": 12, "restBetweenSets": 60, "restAfterExercise": 120 },
-      { "name": "Prancha lateral", "mode": "time", "sets": 1, "duration": 30 }
+      {
+        "name": "Remada",
+        "mode": "reps",
+        "sets": 1,
+        "reps": 12,
+        "restAfterExercise": 60
+      },
+      {
+        "name": "Serrote",
+        "mode": "reps",
+        "sets": 1,
+        "reps": 10
+      }
     ]
   },
   "steps": [
-    { "at": 0, "event": "start" },
-    { "expect": { "phase": "work", "exercise": "Remada", "setNumber": 1 } },
-    { "at": 10, "event": "next" },
-    { "expect": { "phase": "rest", "exercise": "Remada", "remaining": 60 } },
-    { "at": 70, "event": "tick" },
-    { "expect": { "status": "running", "phase": "rest", "exercise": "Remada", "remaining": 0, "overtime": 0 } },
-    { "at": 70, "event": "next" },
-    { "expect": { "phase": "work", "exercise": "Remada", "setNumber": 2 } },
-    { "at": 80, "event": "next" },
-    { "expect": { "phase": "rest", "exercise": "Remada", "setNumber": 2, "remaining": 120 } },
-    { "at": 205, "event": "tick" },
-    { "expect": { "status": "running", "phase": "rest", "remaining": 0, "overtime": 5 } },
-    { "at": 205, "event": "next" },
-    { "expect": { "phase": "work", "exercise": "Prancha lateral", "setNumber": 1, "remaining": 30 } },
-    { "at": 235, "event": "tick" },
-    { "expect": { "status": "finished", "completedAll": true, "completedSets": 3, "sessionElapsed": 235 } }
+    {
+      "at": 0,
+      "event": "start"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "exercise": "Remada"
+      }
+    },
+    {
+      "at": 0,
+      "event": "next"
+    },
+    {
+      "at": 30,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "phase": "rest",
+        "remaining": 60
+      }
+    },
+    {
+      "at": 90,
+      "event": "tick"
+    },
+    {
+      "expect": {
+        "phase": "prepare",
+        "exercise": "Serrote",
+        "setNumber": 1,
+        "overtime": 0
+      }
+    },
+    {
+      "at": 100,
+      "event": "next"
+    },
+    {
+      "at": 130,
+      "event": "next"
+    },
+    {
+      "expect": {
+        "status": "finished",
+        "completedAll": true,
+        "completedSets": 2
+      }
+    }
   ]
 }
