@@ -37,7 +37,7 @@ are immutable — supersede, don't edit.
 - **Typecheck**: `npm run typecheck`
 - **Tests** (engine, domain, data, services): `npm test`
 - **Run**: `npm run web` (dev server in the browser)
-- **Static build**: `npx expo export --platform web` → `dist/`
+- **Static build**: `npm run build` → `dist/`
 
 ## Pull requests
 

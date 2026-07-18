@@ -4,8 +4,9 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "start": "expo start",
+    "start": "BROWSER=none expo start --web",
     "web": "BROWSER=none expo start --web",
+    "build": "expo export --platform web",
     "typecheck": "tsc --noEmit",
     "test": "jest"
   },

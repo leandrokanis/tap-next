@@ -156,7 +156,7 @@ npm run web         # dev server no browser
 ### Deploy
 
 ```bash
-npx expo export --platform web   # site estático em dist/
+npm run build                    # site estático em dist/
 ```
 
 Hospede `dist/` em qualquer host estático (GitHub Pages, Vercel, Netlify…).
