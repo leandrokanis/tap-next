@@ -1,4 +1,3 @@
-import * as Crypto from 'expo-crypto';
 import React, {
   createContext,
   useCallback,
@@ -7,8 +6,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { AppState } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
 import { clearSnapshot, saveSnapshot } from '../data/activeSession';
 import { insertSession } from '../data/sessionRepository';
@@ -16,12 +13,8 @@ import { SessionRecord } from '../domain/session';
 import { Workout } from '../domain/workout';
 import * as engine from '../engine/engine';
 import { EngineState } from '../engine/engine';
-import {
-  cancelScheduledNotifications,
-  schedulePhaseEndNotification,
-  SessionEvent,
-  signalEvent,
-} from '../services/alerts';
+import { SessionEvent, signalEvent } from '../services/alerts';
+import { acquireWakeLock, releaseWakeLock } from '../services/wakeLock';
 
 const TICK_MS = 250;
 
@@ -54,7 +47,6 @@ export function useSession(): SessionContextValue {
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const { t } = useTranslation();
   const [state, setState] = useState<EngineState | null>(null);
   const [now, setNow] = useState(nowSeconds());
   const phaseIndexRef = useRef<number>(-1);
@@ -108,27 +100,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     signalEvent(remaining > 0 ? 'countdownTick' : 'exerciseStart');
   }, [state, now]);
 
-  // Background: schedule a local notification for the current timed phase.
+  // Keep the screen on while a session is active (ADR 0007); best-effort.
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (appState) => {
-      const current = stateRef.current;
-      if (appState === 'active') {
-        cancelScheduledNotifications();
-        return;
-      }
-      if (appState !== 'background' || !current || current.status !== 'running') return;
-      const remaining = engine.phaseRemaining(current, nowSeconds());
-      if (remaining === null) return;
-      const phase = engine.currentPhase(current);
-      const label = nextUpLabel(current, t);
-      schedulePhaseEndNotification(
-        remaining,
-        phase?.type === 'rest' ? t('session.restOverTitle') : t('session.phaseOverTitle'),
-        label ? t('session.restOverBody', { label }) : '',
-      );
-    });
-    return () => subscription.remove();
-  }, [t]);
+    if (!state) return;
+    acquireWakeLock();
+    return () => {
+      releaseWakeLock();
+    };
+  }, [state !== null]);
 
   const startSession = useCallback((workout: Workout) => {
     const s = engine.start(workout, nowSeconds());
@@ -169,12 +148,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback(async (finished: EngineState): Promise<SessionRecord> => {
     const record = engine.summarize(finished, nowSeconds(), {
-      id: Crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       source: 'iphone',
     });
     await insertSession(record);
     await clearSnapshot();
-    await cancelScheduledNotifications();
     setState(null);
     return record;
   }, []);
@@ -193,7 +171,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const discard = useCallback(async () => {
     await clearSnapshot();
-    await cancelScheduledNotifications();
     setState(null);
   }, []);
 
@@ -240,13 +217,3 @@ function transitionEvent(state: EngineState): SessionEvent | null {
   return 'restEnd';
 }
 
-function nextUpLabel(
-  state: EngineState,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): string {
-  const following = state.phases[state.phaseIndex + 1];
-  if (!following) return '';
-  if (following.type === 'rest') return t('session.rest');
-  const exercise = state.workout.exercises[following.exerciseIndex];
-  return t('session.nextUpSet', { exercise: exercise.name, set: following.setNumber });
-}

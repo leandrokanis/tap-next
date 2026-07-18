@@ -4,8 +4,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { listWorkouts, saveWorkout } from '../data/workoutRepository';
-import { pushWorkoutsToWatch } from '../data/watchSync';
+import { saveWorkout } from '../data/workoutRepository';
 import { JsonPosition, locateJsonPath, parseWorkout, ValidationError } from '../domain/workout';
 import { RootStackParamList } from '../navigation/types';
 import { BigCTA, Card, MonoLabel, RoundIconButton } from '../ui/components';
@@ -73,8 +72,6 @@ export default function ImportScreen({ navigation }: Props) {
   const handleImport = async () => {
     if (!workout || !workout.ok) return;
     await saveWorkout(workout.workout);
-    const all = await listWorkouts();
-    pushWorkoutsToWatch(all.map((w) => w.workout));
     showAlert(t('import.success', { name: workout.workout.name }));
     navigation.goBack();
   };

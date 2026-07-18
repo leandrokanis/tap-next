@@ -6,33 +6,34 @@ Um companion open source para sessões de musculação e fisioterapia. O Tap Nex
 conduz o treino exercício a exercício, cronometrando cada fase, tocando um
 sinal quando é hora de seguir — e pedindo um único toque quando não é.
 
-> **Status:** 🛠 v1 implementada — motores TS + Swift (fixtures compartilhadas),
-> app iPhone, fontes do app watchOS, flows Maestro e CI. Passo manual restante:
-> montar o target do Watch no Xcode ([docs/WATCH_SETUP.md](docs/WATCH_SETUP.md)).
+É um **app web instalável, offline-first (PWA)**: abra a URL, adicione à tela
+de início e treine sem sinal na academia. Sem loja, sem conta — treinos entram
+como JSON, o histórico sai como JSON, e nada depende de servidor.
+
+> **Status:** 🛠 v3 — pivô web concluído ([ADR 0007](docs/adr/0007-pivo-para-pwa-web.md)).
+> Os apps nativos iOS/Watch foram descontinuados; tudo roda no browser.
 
 ## O que ele faz
 
-- **Sessões guiadas** — mostra o exercício atual, separa fases de execução e
-  descanso e cronometra cada uma.
+- **Sessão em três momentos** — Preparação → Execução → Descanso, numa
+  anatomia de tela única; só o palco central muda.
+- **Preparação antes de cada série** — ajuste reps/carga/tempo nas rodas de
+  rolagem antes de executar; confirme com um toque em **Iniciar**. Nada
+  começa sozinho.
 - **Avanço automático (só onde faz sentido)** — isometrias avançam sozinhas
-  ao zerar, com som no iPhone e háptico + som no Apple Watch. Descanso zerado
-  avisa e **espera** em overtime (`+0:23`) — o próximo set nunca começa sem
-  você.
-- **Um botão "Próximo" grande** — séries por repetições não têm fim natural,
-  então avançam com um toque único e fácil de acertar. Tocar Próximo durante
-  uma fase cronometrada pula a fase.
-- **Registro por série sem fricção (prospectivo)** — ao fim da série, ela é
-  gravada com o prescrito e o descanso começa na hora; durante o descanso o
-  **próximo** set aparece pré-preenchido (reps · kg), ajustável ali mesmo.
-  Não mexeu, o prescrito vale.
-- **App de Watch independente** — roda a sessão inteira no relógio dentro de
-  uma `HKWorkoutSession` (sem depender do iPhone durante o treino, gravando no
-  app Saúde) e sincroniza os resultados depois.
-- **Gestão de treinos** — mantenha vários treinos, importe novos em JSON,
-  exporte tudo (treinos e histórico) em JSON. Seus dados são seus.
-- **Histórico** — toda sessão concluída (ou parcial) fica salva: treino, data,
-  duração e séries realmente feitas — consultável no iPhone, incluindo o que
-  foi feito no Watch.
+  ao zerar; descanso zerado sinaliza e **abre a Preparação seguinte**
+  automaticamente, com o tempo parado em âmbar (`+0:23`).
+- **Um botão grande por tela** — Iniciar, Próximo, Iniciar próximo. Séries
+  por repetições avançam com um toque único e fácil de acertar.
+- **Registro por série sem fricção (prospectivo)** — cada série concluída é
+  gravada com os valores confirmados na Preparação. Não mexeu, o prescrito
+  vale.
+- **Um som para cada evento** — contagem de entrada, vai, fim de isometria,
+  início e fim de descanso, sessão concluída — e vibração onde o aparelho
+  suportar. A tela fica acesa durante a sessão (wake lock).
+- **Gestão de treinos e histórico** — importe treinos em JSON (validação
+  inline com linha/coluna), consulte e edite o histórico, exporte tudo. Seus
+  dados são seus.
 
 ## Formato do treino
 
@@ -107,57 +108,60 @@ descansos>
 
 | Componente | Tecnologia |
 |---|---|
-| App iPhone | React Native (Expo, prebuild) |
-| App Watch | SwiftUI nativo (target watchOS no mesmo projeto Xcode) |
-| Motor de sessão | Implementado duas vezes — TypeScript e Swift — mantidos idênticos por fixtures de teste compartilhadas |
-| Sync | WatchConnectivity; treinos fluem iPhone → Watch, sessões feitas fluem Watch → iPhone (append-only, sem conflitos) |
-| Persistência | SQLite no iPhone, arquivos JSON + outbox no Watch |
+| App | React Native Web via Expo (TypeScript) |
+| Distribuição | PWA — hospedagem estática + manifest + service worker |
+| Motor de sessão | TypeScript puro, especificado por fixtures JSON executáveis |
+| Persistência | Armazenamento local do browser (JSON), snapshot versionado de retomada |
 
-React Native não roda em watchOS, então o app do Watch é nativo por decisão de
-projeto — veja o [ADR 0001](docs/adr/0001-react-native-iphone-swiftui-watch.md)
-e os demais [registros de decisão de arquitetura](docs/adr/).
+Veja os [registros de decisão de arquitetura](docs/adr/) — o pivô web é o
+[ADR 0007](docs/adr/0007-pivo-para-pwa-web.md).
 
 ## Layout do repositório
 
 ```
 tap-next/
-├── src/                  # app React Native
-│   ├── engine/           # motor de sessão (TS puro, sem imports de RN)
+├── src/
+│   ├── engine/           # motor de sessão (TS puro)
 │   ├── domain/           # tipos + validação do schema de treino
-│   ├── data/             # SQLite, repositórios, sync (lado iPhone)
-│   ├── screens/
+│   ├── data/             # repositórios sobre localStorage, export
+│   ├── screens/          # telas RN-Web
+│   ├── services/         # alerts (som/vibração), wake lock, PWA
+│   ├── session/          # SessionProvider
+│   ├── ui/               # design system
 │   └── i18n/             # en + pt-BR
-├── ios/                  # gerado por expo prebuild, versionado
-│   └── TapNextWatch/     # app watchOS (SwiftUI + motor Swift)
-├── fixtures/engine/      # fixtures compartilhadas TS ↔ Swift
-├── e2e/flows/            # flows Maestro (YAML estilo BDD)
-└── docs/                 # PRD, SPEC, ADRs
+├── public/               # manifest, service worker, ícones PWA
+├── fixtures/engine/      # espec executável do motor
+└── docs/                 # PRD, SPEC, ADRs, protótipo
 ```
 
 ## Estratégia de testes
 
 | Camada | Ferramenta |
 |---|---|
-| Motor TS, validação de schema, repositórios | Jest |
-| Motor Swift, sync, HealthKit (mockado) | XCTest |
-| Paridade dos motores (TS ↔ Swift) | Fixtures compartilhadas em `fixtures/engine/` |
-| End-to-end (simulador iOS) | Maestro |
+| Motor, validação de schema, dados, serviços | Jest |
+| Comportamento do motor | Fixtures em `fixtures/engine/` (espec executável) |
+| End-to-end (web) | Backlog (Playwright) |
 
 ## Como rodar
 
 ```bash
 npm install
 
-npm run typecheck                              # TypeScript
-npm test                                       # Jest — motor, domínio, dados
-swift test --package-path watch/TapNextEngine  # motor Swift, mesmas fixtures
+npm run typecheck   # TypeScript
+npm test            # Jest — motor, domínio, dados, serviços
 
-npx expo run:ios                               # app iPhone (macOS + Xcode)
-npm run e2e                                    # flows Maestro (ver e2e/README.md)
+npm run web         # dev server no browser
 ```
 
-O app do Watch exige uma configuração única de target no Xcode:
-[docs/WATCH_SETUP.md](docs/WATCH_SETUP.md).
+### Deploy
+
+```bash
+npx expo export --platform web   # site estático em dist/
+```
+
+Hospede `dist/` em qualquer host estático (GitHub Pages, Vercel, Netlify…).
+O service worker e o manifest saem de `public/` — depois da primeira visita o
+app funciona 100% offline e pode ser adicionado à tela de início.
 
 ## Documentação
 

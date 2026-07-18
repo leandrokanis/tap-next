@@ -1,6 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as Crypto from 'expo-crypto';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -9,7 +8,6 @@ import { clearSnapshot, loadSnapshot } from '../data/activeSession';
 import { insertSession } from '../data/sessionRepository';
 import { listSessions } from '../data/sessionRepository';
 import { deleteWorkout, listWorkouts, StoredWorkout } from '../data/workoutRepository';
-import { pushWorkoutsToWatch } from '../data/watchSync';
 import { SessionRecord } from '../domain/session';
 import * as engine from '../engine/engine';
 import { EngineState } from '../engine/engine';
@@ -68,7 +66,7 @@ export default function HomeScreen({ navigation }: Props) {
     const now = Date.now() / 1000;
     const finished = engine.finish(snapshot, now);
     const record = engine.summarize(finished, now, {
-      id: Crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       source: 'iphone',
     });
     await insertSession(record);
@@ -91,7 +89,6 @@ export default function HomeScreen({ navigation }: Props) {
           await deleteWorkout(stored.id);
           const remaining = await listWorkouts();
           setWorkouts(remaining);
-          pushWorkoutsToWatch(remaining.map((w) => w.workout));
         },
       },
     ]);

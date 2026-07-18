@@ -1,25 +1,27 @@
-# Tap Next — Especificação v2
+# Tap Next — Especificação v3
 
-Companion open source para sessões de musculação e fisioterapia: conduz o treino
-exercício a exercício, com cronômetro, sinal sonoro e registro por série.
+Companion open source para sessões de musculação e fisioterapia: conduz o
+treino exercício a exercício, com cronômetro, sinal sonoro e registro por
+série. **App web instalável (PWA), offline-first** — ADR 0007.
 
-Decisões fechadas em entrevista em 2026-07-05; fluxo de sessão v2
-(Preparação-first) fechado em 2026-07-17 (PRD v2.0, protótipo v2.1,
-ADR 0006).
+Decisões: entrevista de 2026-07-05; fluxo de sessão v2 (Preparação-first)
+em 2026-07-17 (PRD 2.0, ADR 0006); pivô web em 2026-07-18 (PRD 3.0,
+ADR 0007).
 
-## 1. Plataformas e arquitetura
+## 1. Plataforma e arquitetura
 
 | Componente | Tecnologia |
 |---|---|
-| iPhone | React Native via Expo (prebuild, `ios/` versionado) |
-| Apple Watch | SwiftUI nativo, target dentro do projeto Xcode gerado |
-| Comunicação | WatchConnectivity (WCSession) |
+| App | React Native Web via Expo (TypeScript) |
+| Distribuição | PWA: hospedagem estática + manifest + service worker |
+| Persistência | Armazenamento local do browser (localStorage, JSON) |
 
-- O Watch funciona **standalone** durante o treino; sincroniza quando alcançável.
-- O **motor de sessão existe duas vezes** (TypeScript e Swift), por decisão
-  consciente: React Native não roda em watchOS. As duas implementações são
-  mantidas idênticas por **fixtures de teste compartilhadas** (JSON com treino
-  de entrada + sequência de fases esperada), consumidas pelo Jest e pelo XCTest.
+- `npx expo export --platform web` gera o site estático (`dist/`); o
+  diretório `public/` (manifest, service worker, ícones) é copiado à raiz.
+- O service worker pré-cacheia o shell e faz cache-first em runtime — tudo
+  offline após o primeiro load.
+- **Não há backend, contas nem sync.** O app nativo iOS/Watch foi removido
+  (histórico no git; ADRs 0001/0002/0004/0005 substituídos).
 
 ## 2. Formato do treino (JSON, schema v1)
 
@@ -59,7 +61,8 @@ versão futura do schema (campo `version` já reservado).
   (opcional, s) após a última série, antes do próximo exercício. Sem descanso
   automático após o último exercício do treino.
 - Validação com mensagens de erro apontando campo/posição
-  (ex.: `exercises[2].sets: esperado número`).
+  (ex.: `exercises[2].sets: esperado número`) e localização linha/coluna no
+  texto colado (`locateJsonPath`).
 
 ## 3. Motor de sessão (máquina de estados)
 
@@ -69,11 +72,11 @@ uma `prepare`** — o invariante do produto é "nenhum exercício começa sem um
 toque explícito".
 
 - **Preparação** (`prepare`): sem cronômetro próprio; exibe os valores da
-  série por vir, editáveis (rodas no iPhone, Digital Crown no Watch).
-  **Nunca avança sozinha** — sai pelo **Iniciar**. Quando veio de um
-  descanso zerado, mostra o **overtime** (`max(0, now − restDeadline)`) em
-  âmbar; `restDeadline` é o prazo original do descanso anterior, mantido
-  mesmo se o descanso foi cortado, e deslocado por pausas.
+  série por vir, editáveis (rodas de rolagem). **Nunca avança sozinha** —
+  sai pelo **Iniciar**. Quando veio de um descanso zerado, mostra o
+  **overtime** (`max(0, now − restDeadline)`) em âmbar; `restDeadline` é o
+  prazo original do descanso anterior, mantido mesmo se o descanso foi
+  cortado, e deslocado por pausas.
 - **Contagem de entrada** (séries `time`, RF-17): **Iniciar** desloca o
   início do `work` em 3 s (`phaseStartedAt = at + 3`); a UI lê
   `countdownRemaining` (3 → 2 → 1 → vai). Os 3 s contam na duração da
@@ -108,23 +111,21 @@ toque explícito".
   overtime e contagem de entrada contam; o tempo gravado de uma série
   `time` exclui a contagem.
 
+### Fixtures — especificação executável
+
+O comportamento do motor é definido pelas fixtures em `fixtures/engine/`
+(eventos + expectativas), rodadas pelo Jest. **Regra de ouro: mudou o motor
+⇒ mudou a fixture, no mesmo PR** (ADR 0007, herdeira da 0002).
+
 ### Sessão interrompida
 
 - **Encerrar** no meio abre escolha: *Salvar e sair* (entra no histórico com
   status `parcial` e as séries feitas) ou *Descartar*.
-- O estado da sessão é **persistido a cada transição de fase**; se o app morrer
-  (crash, bateria, watchdog), ao reabrir oferece retomar de onde parou.
+- O estado da sessão é **persistido a cada transição de fase** (snapshot
+  versionado); refresh/fechamento/crash ⇒ ao reabrir, oferece retomar de
+  onde parou.
 
-## 4. Apple Watch
-
-- Sessão roda dentro de uma **`HKWorkoutSession`**
-  (`.traditionalStrengthTraining`): app não suspende com o pulso abaixado,
-  cronômetro preciso, hápticos sempre disparam.
-- O treino é **gravado no app Saúde/Fitness** (FC, calorias, anéis). O
-  histórico do Tap Next é independente do HealthKit.
-- Permissão HealthKit pedida no primeiro uso.
-
-## 5. Histórico
+## 4. Histórico
 
 Registro por sessão concluída ou parcial:
 
@@ -135,86 +136,87 @@ Registro por sessão concluída ou parcial:
   "startedAt": "2026-07-05T14:02:11Z",
   "durationSeconds": 2880,
   "status": "completed",
-  "source": "watch",
+  "source": "iphone",
   "sets": [
     { "exercise": "Agachamento", "setIndex": 1, "reps": 10, "weight": 60 }
   ]
 }
 ```
 
-- `status`: `completed` | `partial`. `source`: `iphone` | `watch`.
-- Consulta e edição posterior **no iPhone**; o Watch não tem tela de histórico.
+- `status`: `completed` | `partial`. (`source` permanece no schema por
+  compatibilidade de export; novas sessões usam o valor legado.)
 
-## 6. Sincronização (WatchConnectivity)
+## 5. Persistência
 
-- **Treinos**: iPhone é a fonte da verdade → enviados ao Watch via
-  `updateApplicationContext` (último estado vence; Watch só lê).
-- **Sessões feitas no Watch**: fila de saída (outbox) → `transferUserInfo`
-  (entrega garantida quando alcançável) → iPhone grava no histórico.
-- Histórico é **append-only** na sincronização ⇒ sem conflitos por construção.
-  Edições de histórico acontecem só no iPhone, depois de importado.
+- **localStorage** (JSON) atrás da camada repository (`src/data/`):
+  treinos (`tapnext.workouts`), sessões (`tapnext.sessions`) e snapshot da
+  sessão ativa (`tapnext.activeSession`, envelope versionado).
+- Dados pequenos por natureza (anos de histórico ≈ centenas de KB).
+  IndexedDB fica no backlog se crescer.
+- O export JSON (RF-14) é a garantia de posse do dado — sobrevive a
+  qualquer limpeza de storage do browser.
 
-## 7. Persistência
-
-- **iPhone**: SQLite (`expo-sqlite`) atrás de uma camada repository —
-  tabelas `workouts`, `sessions`, `session_sets`.
-- **Watch**: arquivos JSON no container do app — cache de treinos recebido do
-  iPhone + outbox de sessões pendentes de envio.
-
-## 8. Som e alertas no iPhone
+## 6. Som, vibração e tela
 
 - **Sons por evento (RF-18)**: contagem de entrada (tick por segundo),
   "vai"/início de exercício, fim de isometria, início de descanso, fim de
-  descanso (abertura da Preparação) e sessão concluída — assets distintos em
-  `assets/sounds/`, mapeados em `src/services/alerts.ts` (`signalEvent`);
-  hápticos equivalentes no Watch (`WKHaptic`).
-- App em segundo plano/tela bloqueada: **notificação local agendada** para o
-  instante do fim da fase cronometrada (som do sistema), cancelada/reagendada
-  a cada mudança de fase, pausa ou pulo.
+  descanso (abertura da Preparação) e sessão concluída — assets em
+  `assets/sounds/`, tocados via `expo-audio` (Web Audio); vibração por
+  padrão de evento via `navigator.vibrate` onde houver.
+- **Wake lock (RF-23)**: `navigator.wakeLock` mantém a tela acesa durante a
+  sessão; best-effort (sem suporte ⇒ no-op), re-adquirido ao voltar à aba.
+- O primeiro toque em Iniciar é o gesto que desbloqueia o áudio (política de
+  autoplay dos browsers).
+- Sem notificações locais/push (fora de escopo — ADR 0007).
 
-## 9. Importação e exportação
+## 7. Importação e exportação
 
 - Importar treino: **paste-only** — botão único "Colar da área de
   transferência", pré-visualização somente leitura com **erro inline**
-  (linha destacada) e cartão apontando campo, linha e coluna
-  (`locateJsonPath` em `src/domain/workout.ts`); Importar desabilitado
-  enquanto houver erro. (Seletor de arquivos, share sheet e URL: backlog.)
-- Exportar: treinos e histórico completos em JSON — dado do usuário é do
-  usuário.
+  (linha destacada) e cartão apontando campo, linha e coluna; Importar
+  desabilitado enquanto houver erro. (Arquivo/share/URL: backlog.)
+- Exportar: treinos e histórico completos em JSON.
 
-## 10. Testes
+## 8. PWA
+
+- `public/manifest.webmanifest`: nome, ícones 192/512 (conceito 2c),
+  `display: standalone`, tema/fundo `#0B0D11`.
+- `public/sw.js`: precache do shell no install; runtime cache-first para
+  GETs same-origin; navegações offline caem para o shell. Bump da constante
+  `CACHE` invalida tudo num deploy.
+- Registro do SW e injeção do manifest em `src/services/pwa.ts`
+  (só web + produção).
+
+## 9. Testes
 
 | Camada | Ferramenta |
 |---|---|
-| Motor TS, validação de schema, repositórios | Jest |
-| Motor Swift, sync, HealthKit (mockado) | XCTest |
-| Paridade dos dois motores | Fixtures JSON compartilhadas (`fixtures/engine/`) |
-| E2E iPhone | **Maestro** no simulador iOS (flows YAML, estilo BDD) |
+| Motor TS, validação de schema, dados (localStorage), serviços | Jest |
+| Comportamento do motor | Fixtures JSON (`fixtures/engine/`) como espec executável |
+| E2E web | Backlog (Playwright) |
 
-Decisão registrada: Playwright foi **substituído por Maestro** — Playwright só
-automatiza browsers e não dirige app iOS nativo.
-
-## 11. Projeto
+## 10. Projeto
 
 - **Licença: MIT.**
-- **i18n desde a v1**: strings centralizadas, pt-BR + en, seguindo o idioma do
-  sistema (RN: i18next; Watch: `Localizable.strings`).
-- CI (GitHub Actions): job Linux (lint + Jest); job macOS (XCTest + build
-  Watch + Maestro).
+- **i18n desde a v1**: strings centralizadas (i18next), pt-BR + en, seguindo
+  o idioma do sistema.
+- CI (GitHub Actions): job único Linux — typecheck + Jest.
 
-## Layout do repositório (previsto)
+## Layout do repositório
 
 ```
 tap-next/
-├── src/                  # app React Native
-│   ├── engine/           # motor de sessão (TS, puro, sem RN)
+├── src/
+│   ├── engine/           # motor de sessão (TS, puro)
 │   ├── domain/           # tipos, validação do schema de treino
-│   ├── data/             # SQLite, repositórios, sync (lado iPhone)
-│   ├── screens/
+│   ├── data/             # repositórios sobre localStorage, export
+│   ├── screens/          # telas RN-Web
+│   ├── services/         # alerts (som/vibração), wakeLock, pwa
+│   ├── session/          # SessionProvider
+│   ├── ui/               # design system
 │   └── i18n/
-├── ios/                  # gerado por expo prebuild, versionado
-│   └── TapNextWatch/     # app watchOS (SwiftUI + motor Swift)
-├── fixtures/engine/      # fixtures compartilhadas TS ↔ Swift
-├── e2e/                  # flows Maestro
-└── docs/SPEC.md
+├── public/               # manifest, service worker, ícones PWA
+├── fixtures/engine/      # espec executável do motor
+├── assets/               # ícone, fontes, sons
+└── docs/                 # PRD, SPEC, ADRs, protótipo
 ```

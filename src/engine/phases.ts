@@ -31,7 +31,7 @@ export type Phase = PreparePhase | WorkPhase | RestPhase;
 
 /**
  * Expands a workout into the flat phase sequence the engine walks through.
- * Mirrors PhaseExpansion.swift — behavior changes require a fixture change.
+ * Behavior changes require a fixture change (executable spec).
  *
  * Rules (ADR 0006): every set is preceded by a `prepare` phase;
  * restBetweenSets between sets of one exercise; restAfterExercise after its

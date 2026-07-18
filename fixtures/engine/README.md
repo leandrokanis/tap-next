@@ -1,9 +1,8 @@
 # Fixtures compartilhadas do motor de sessão
 
-Estas fixtures são a **especificação executável** do motor de sessão. As duas
-implementações — TypeScript (`src/engine/`, via Jest) e Swift
-(`ios/TapNextWatch/`, via XCTest) — carregam os mesmos arquivos e precisam
-produzir exatamente os mesmos resultados ([ADR 0002](../../docs/adr/0002-motor-duplicado-com-fixtures-compartilhadas.md)).
+Estas fixtures são a **especificação executável** do motor de sessão
+(`src/engine/`), carregadas pelo Jest ([ADR 0007](../../docs/adr/0007-pivo-para-pwa-web.md),
+herdeira da regra da 0002).
 
 ## Formato
 
@@ -60,10 +59,8 @@ tempos no `at` desse evento. Campos omitidos não são verificados:
 | `completedAll` | todas as fases foram percorridas |
 | `lastSet` | subconjunto do último registro (`exercise`, `setIndex`, `reps`, `weight`, `durationSeconds`, `adjusted`) |
 
-Runners: `src/engine/__tests__/fixtures.test.ts` (Jest) e
-`watch/TapNextEngine/Tests/.../FixtureTests.swift` (XCTest).
+Runner: `src/engine/__tests__/fixtures.test.ts` (Jest).
 
 ## Regra de ouro
 
-Mudou o comportamento do motor ⇒ mudou a fixture ⇒ mudou **as duas**
-implementações, no mesmo PR.
+Mudou o comportamento do motor ⇒ mudou a fixture, no mesmo PR.

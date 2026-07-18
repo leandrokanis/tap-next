@@ -3,31 +3,31 @@
 ## Fase 1 — Remoção do nativo + promoção da camada web (tracer bullet)
 > Critério de aceite: CA06, CA07 — repo web-only com suites verdes
 
-- [ ] T001 Deletar `ios/`, `watch/`, `e2e/`, `docs/WATCH_SETUP.md`; podar
+- [x] T001 Deletar `ios/`, `watch/`, `e2e/`, `docs/WATCH_SETUP.md`; podar
       entradas nativas do `.gitignore`; remover script `e2e` do `package.json`
-- [ ] T002 `package.json`: remover `expo-sqlite`, `expo-notifications`,
+- [x] T002 `package.json`: remover `expo-sqlite`, `expo-notifications`,
       `expo-haptics`, `react-native-watch-connectivity` (+ `npm install`)
-- [ ] T003 `app.json`: remover seção `ios` e plugins nativos; adicionar config
+- [x] T003 `app.json`: remover seção `ios` e plugins nativos; adicionar config
       `web` (nome, tema escuro)
-- [ ] T004 `src/data/`: promover `*.web.ts` → `*.ts` (activeSession,
+- [x] T004 `src/data/`: promover `*.web.ts` → `*.ts` (activeSession,
       sessionRepository, workoutRepository); deletar `database.ts`,
       `mappers.ts`, `watchSync.ts`; remover `pushWorkoutsToWatch` de
       `src/screens/HomeScreen.tsx` e `src/screens/ImportScreen.tsx`
-- [ ] T005 🔴 Testes de round-trip sobre localStorage em
+- [x] T005 🔴 Testes de round-trip sobre localStorage em
       `src/data/__tests__/storage.test.ts` (workout salvo sobrevive a novo
       acesso; snapshot v2 round-trips); migrar cobertura de
       `buildExportBundle` para `export.test.ts`; deletar `mappers.test.ts`
-- [ ] T006 🟢 Ajustes mínimos até `npm run typecheck` e `npm test` verdes
+- [x] T006 🟢 Ajustes mínimos até `npm run typecheck` e `npm test` verdes
 
 ## Fase 2 — Alertas web + wake lock
 > Critério de aceite: CA03, CA04
 
-- [ ] T007 `src/services/alerts.ts`: remover expo-notifications/haptics;
+- [x] T007 `src/services/alerts.ts`: remover expo-notifications/haptics;
       vibração via `navigator.vibrate` (padrão por evento); sons seguem
       expo-audio; apagar chaves i18n órfãs de notificação (pt-BR + en)
-- [ ] T008 🔴 Teste de `src/services/wakeLock.ts` (best-effort: sem
+- [x] T008 🔴 Teste de `src/services/wakeLock.ts` (best-effort: sem
       `navigator.wakeLock` → no-op) em `src/services/__tests__/wakeLock.test.ts`
-- [ ] T009 🟢 `src/services/wakeLock.ts` + integração no
+- [x] T009 🟢 `src/services/wakeLock.ts` + integração no
       `src/session/SessionProvider.tsx` (adquire com sessão ativa, libera ao
       sair, re-adquire em `visibilitychange`); remover efeito de notificação
       local do provider
@@ -35,26 +35,26 @@
 ## Fase 3 — PWA
 > Critério de aceite: CA02, CA05
 
-- [ ] T010 Gerar ícones `public/icon-192.png` e `public/icon-512.png` a
+- [x] T010 Gerar ícones `public/icon-192.png` e `public/icon-512.png` a
       partir de `assets/icon.png`; escrever `public/manifest.webmanifest`
       (standalone, dark, ícones)
-- [ ] T011 `public/sw.js`: precache do shell no install + runtime
+- [x] T011 `public/sw.js`: precache do shell no install + runtime
       cache-first same-origin; `src/services/pwa.ts` registra SW e injeta
       `<link rel="manifest">` (só web + produção); chamada no `App.tsx`
-- [ ] T012 Validar `npx expo export --platform web` gera `dist/` com
+- [x] T012 Validar `npx expo export --platform web` gera `dist/` com
       manifest + sw na raiz
 
 ## Fase 4 — Docs & CI
 > Critério de aceite: CA08, CA09
 
-- [ ] T013 PRD 3.0 em `docs/PRD.md`: plataforma web/PWA, RF-09/10/11/21
+- [x] T013 PRD 3.0 em `docs/PRD.md`: plataforma web/PWA, RF-09/10/11/21
       removidos, RF-02/02b/18 sem Watch/háptico, seção Watch fora, novo RF de
       instalabilidade/offline, backlog e riscos atualizados
-- [ ] T014 `docs/SPEC.md`: plataformas, persistência (localStorage), som
+- [x] T014 `docs/SPEC.md`: plataformas, persistência (localStorage), som
       (Web Audio + vibrate + wake lock), testes (sem XCTest/Maestro),
       layout do repo; `fixtures/engine/README.md` sem Swift
-- [ ] T015 `README.md` + `README.pt-BR.md`: rodar/instalar/deploy web
-- [ ] T016 `.github/workflows/ci.yml` só typecheck+Jest; deletar
+- [x] T015 `README.md` + `README.pt-BR.md`: rodar/instalar/deploy web
+- [x] T016 `.github/workflows/ci.yml` só typecheck+Jest; deletar
       `e2e-ios.yml`
 
 ## Dependências entre fases
