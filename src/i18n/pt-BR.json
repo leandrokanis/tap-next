@@ -51,7 +51,8 @@
     "errorsFound_one": "{{count}} erro encontrado",
     "errorsFound_other": "{{count}} erros encontrados",
     "lineCol": "Linha {{line}}, coluna {{col}}",
-    "success": "\"{{name}}\" importado."
+    "success": "\"{{name}}\" importado.",
+    "manualPaste": "Toque aqui e cole (segurar → Colar)"
   },
   "validation": {
     "required": "obrigatório",

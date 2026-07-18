@@ -51,7 +51,8 @@
     "errorsFound_one": "{{count}} error found",
     "errorsFound_other": "{{count}} errors found",
     "lineCol": "Line {{line}}, column {{col}}",
-    "success": "\"{{name}}\" imported."
+    "success": "\"{{name}}\" imported.",
+    "manualPaste": "Tap here and paste (long-press → Paste)"
   },
   "validation": {
     "required": "required",
