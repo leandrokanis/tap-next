@@ -10,6 +10,7 @@ jobs:
   publish:
     name: Build & push image (Docker Hub)
     runs-on: ubuntu-latest
+    environment: dockerhub
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
