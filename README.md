@@ -160,9 +160,11 @@ npm run web         # dev server in the browser
 npm run build                    # static site in dist/
 ```
 
-Host `dist/` on any static host (GitHub Pages, Vercel, Netlify…). The
-service worker and manifest ship from `public/` — after the first visit the
-app works fully offline and can be added to the home screen.
+Host `dist/` on any static host — or use the Docker image (nginx serving
+the static build, published to Docker Hub by CI): see
+[docs/DEPLOY.md](docs/DEPLOY.md) for the CasaOS + Cloudflare Tunnel setup.
+The service worker and manifest ship from `public/` — after the first visit
+the app works fully offline and can be added to the home screen.
 
 ## Documentation
 

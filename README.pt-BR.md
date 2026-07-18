@@ -159,7 +159,9 @@ npm run web         # dev server no browser
 npm run build                    # site estático em dist/
 ```
 
-Hospede `dist/` em qualquer host estático (GitHub Pages, Vercel, Netlify…).
+Hospede `dist/` em qualquer host estático — ou use a imagem Docker (nginx
+servindo o build, publicada no Docker Hub pelo CI): veja
+[docs/DEPLOY.md](docs/DEPLOY.md) para o setup CasaOS + Cloudflare Tunnel.
 O service worker e o manifest saem de `public/` — depois da primeira visita o
 app funciona 100% offline e pode ser adicionado à tela de início.
 
