@@ -7,26 +7,16 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": {
-      "bundleIdentifier": "com.leandrokanis.tapnext",
-      "supportsTablet": false,
-      "infoPlist": {
-        "UIBackgroundModes": [
-          "audio"
-        ]
-      }
-    },
     "plugins": [
-      "expo-sqlite",
       "expo-localization",
-      [
-        "expo-notifications",
-        {
-          "defaultChannel": "default"
-        }
-      ],
-      "expo-audio",
       "expo-font"
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png",
+      "themeColor": "#0B0D11",
+      "backgroundColor": "#0B0D11"
+    }
   }
 }

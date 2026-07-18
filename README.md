@@ -7,33 +7,35 @@ sessions. Tap Next guides you through a workout exercise by exercise, timing
 every phase, sounding a signal when it's time to move on — and asking for just
 one tap when it isn't.
 
-> **Status:** 🛠 v1 implemented — TS + Swift engines (shared fixtures), iPhone
-> app, watchOS app sources, Maestro flows and CI. Remaining manual step: the
-> one-time Xcode watch-target setup ([docs/WATCH_SETUP.md](docs/WATCH_SETUP.md)).
+It's an **installable, offline-first web app (PWA)**: open the URL, add it to
+your home screen, and train without signal at the gym. No app store, no
+account — workouts come in as JSON, history goes out as JSON, and nothing
+depends on a server.
+
+> **Status:** 🛠 v3 — web pivot done ([ADR 0007](docs/adr/0007-pivo-para-pwa-web.md)).
+> The native iOS/Watch apps were discontinued; everything runs in the browser.
 
 ## What it does
 
-- **Guided sessions** — shows the current exercise, separates work and rest
-  phases, and times each one.
-- **Auto-advance (only where it makes sense)** — isometric holds move on by
-  themselves at zero, with a sound on iPhone and haptics + sound on Apple
-  Watch. A rest that hits zero alerts and **waits** in overtime (`+0:23`) —
-  the next set never starts without you.
-- **One big "Next" button** — rep-based sets have no natural end, so you
-  advance them with a single, hard-to-miss tap. Tapping Next during a timed
-  phase skips it.
-- **Per-set logging without friction (prospective)** — when a set ends it is
-  logged with the prescription and rest starts immediately; during the rest
-  the **upcoming** set appears pre-filled (reps · kg), adjustable right
-  there. Don't touch it and the prescription stands.
-- **Standalone Apple Watch app** — runs the whole session on the Watch inside
-  an `HKWorkoutSession` (no iPhone needed mid-workout, records to Apple
-  Health), then syncs the results back.
-- **Workout management** — keep multiple workouts, import new ones as JSON,
-  export everything (workouts and history) as JSON. Your data is yours.
-- **History** — every finished (or partially finished) session is saved:
-  workout, date, duration, sets actually done — browsable on the iPhone,
-  including sessions done on the Watch.
+- **Guided sessions in three moments** — Preparation → Execution → Rest, on a
+  single fixed screen anatomy; only the central stage changes.
+- **Preparation before every set** — adjust reps/weight/time on scroll wheels
+  before you lift; confirm with one tap on **Start**. Nothing ever starts by
+  itself.
+- **Auto-advance (only where it makes sense)** — isometric holds move on at
+  zero; a rest that hits zero signals and **opens the next Preparation**
+  automatically, with your idle time shown in amber (`+0:23`).
+- **One big button per screen** — Start, Next, Start next. Rep-based sets
+  advance with a single, hard-to-miss tap.
+- **Per-set logging without friction (prospective)** — every finished set is
+  logged with the values you confirmed in Preparation. Don't touch the wheels
+  and the prescription stands.
+- **A distinct sound for every event** — entry countdown, go, isometry end,
+  rest start, rest end, session done — plus vibration where the device
+  supports it. The screen stays awake during a session (wake lock).
+- **Workout management & history** — import workouts as JSON (inline
+  validation with line/column), browse and edit history, export everything.
+  Your data is yours.
 
 ## Workout format
 
@@ -107,57 +109,62 @@ My workout/physio: <describe here — exercises, sets, reps or time, loads, rest
 
 | Component | Technology |
 |---|---|
-| iPhone app | React Native (Expo, prebuild) |
-| Watch app | Native SwiftUI (watchOS target in the same Xcode project) |
-| Session engine | Implemented twice — TypeScript and Swift — kept identical by shared JSON test fixtures |
-| Sync | WatchConnectivity; workouts flow iPhone → Watch, finished sessions flow Watch → iPhone (append-only, conflict-free) |
-| Storage | SQLite on iPhone, JSON files + outbox on the Watch |
+| App | React Native Web via Expo (TypeScript) |
+| Distribution | PWA — static hosting + manifest + service worker |
+| Session engine | Pure TypeScript, specified by executable JSON fixtures |
+| Storage | Browser local storage (JSON), versioned crash-recovery snapshot |
 
-React Native does not run on watchOS, so the Watch app is native by design —
-see [ADR 0001](docs/adr/0001-react-native-iphone-swiftui-watch.md) and the
-other [architecture decision records](docs/adr/).
+See the [architecture decision records](docs/adr/) — the web pivot is
+[ADR 0007](docs/adr/0007-pivo-para-pwa-web.md).
 
 ## Project layout
 
 ```
 tap-next/
-├── src/                  # React Native app
-│   ├── engine/           # session engine (pure TS, no RN imports)
+├── src/
+│   ├── engine/           # session engine (pure TS)
 │   ├── domain/           # types + workout JSON schema validation
-│   ├── data/             # SQLite, repositories, sync (iPhone side)
-│   ├── screens/
+│   ├── data/             # repositories over localStorage, export
+│   ├── screens/          # RN-Web screens
+│   ├── services/         # alerts (sound/vibration), wake lock, PWA
+│   ├── session/          # SessionProvider
+│   ├── ui/               # design system
 │   └── i18n/             # en + pt-BR
-├── ios/                  # generated by expo prebuild, committed
-│   └── TapNextWatch/     # watchOS app (SwiftUI + Swift engine)
-├── fixtures/engine/      # shared TS ↔ Swift engine fixtures
-├── e2e/flows/            # Maestro flows (BDD-style YAML)
-└── docs/                 # PRD, SPEC, ADRs
+├── public/               # PWA manifest, service worker, icons
+├── fixtures/engine/      # executable spec of the session engine
+└── docs/                 # PRD, SPEC, ADRs, prototype
 ```
 
 ## Testing strategy
 
 | Layer | Tool |
 |---|---|
-| TS engine, schema validation, repositories | Jest |
-| Swift engine, sync, HealthKit (mocked) | XCTest |
-| Engine parity (TS ↔ Swift) | Shared fixtures in `fixtures/engine/` |
-| End-to-end (iOS simulator) | Maestro |
+| Engine, schema validation, data, services | Jest |
+| Engine behavior | Shared fixtures in `fixtures/engine/` (executable spec) |
+| End-to-end (web) | Backlog (Playwright) |
 
 ## Getting started
 
 ```bash
 npm install
 
-npm run typecheck                              # TypeScript
-npm test                                       # Jest — engine, domain, data
-swift test --package-path watch/TapNextEngine  # Swift engine, same fixtures
+npm run typecheck   # TypeScript
+npm test            # Jest — engine, domain, data, services
 
-npx expo run:ios                               # iPhone app (macOS + Xcode)
-npm run e2e                                    # Maestro flows (see e2e/README.md)
+npm run web         # dev server in the browser
 ```
 
-The watch app needs a one-time Xcode target setup:
-[docs/WATCH_SETUP.md](docs/WATCH_SETUP.md).
+### Deploy
+
+```bash
+npm run build                    # static site in dist/
+```
+
+Host `dist/` on any static host — or use the Docker image (nginx serving
+the static build, published to Docker Hub by CI): see
+[docs/DEPLOY.md](docs/DEPLOY.md) for the CasaOS + Cloudflare Tunnel setup.
+The service worker and manifest ship from `public/` — after the first visit
+the app works fully offline and can be added to the home screen.
 
 ## Documentation
 

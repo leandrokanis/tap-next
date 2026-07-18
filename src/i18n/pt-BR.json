@@ -51,7 +51,8 @@
     "errorsFound_one": "{{count}} erro encontrado",
     "errorsFound_other": "{{count}} erros encontrados",
     "lineCol": "Linha {{line}}, coluna {{col}}",
-    "success": "\"{{name}}\" importado."
+    "success": "\"{{name}}\" importado.",
+    "manualPaste": "Toque aqui e cole (segurar → Colar)"
   },
   "validation": {
     "required": "obrigatório",
@@ -107,12 +108,6 @@
     "kgTotal": "Kg total",
     "adjustedNote": "Ajustes feitos na preparação em azul",
     "conclude": "Concluir",
-    "completedTitle": "Treino concluído!",
-    "completedBody": "{{sets}} séries em {{minutes}} min.",
-    "restOverTitle": "Fim do descanso",
-    "restOverBody": "Voltar para: {{label}}",
-    "phaseOverTitle": "Tempo!",
-    "ok": "OK",
     "preparation": "Preparação",
     "execution": "Execução",
     "whenReady": "Quando estiver pronto",

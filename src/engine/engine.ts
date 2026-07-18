@@ -24,8 +24,8 @@ export interface UpcomingOverride {
  * "now" into every transition, which keeps the engine pure and lets the
  * shared fixtures (fixtures/engine/) simulate any clock.
  *
- * Mirrors SessionEngine.swift — behavior changes require a fixture change
- * and an equivalent change on the Swift side, in the same PR.
+ * The shared fixtures are this engine's executable spec — behavior changes
+ * require a fixture change in the same PR (ADR 0007).
  */
 export interface EngineState {
   workout: Workout;

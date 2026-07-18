@@ -6,9 +6,8 @@ import * as engine from '../engine';
 import { EngineState } from '../engine';
 
 /**
- * Runs the shared fixtures in fixtures/engine/ — the executable spec both
- * the TS and the Swift engines must satisfy (see ADR 0002). The Swift
- * counterpart is FixtureTests.swift in watch/TapNextEngine.
+ * Runs the fixtures in fixtures/engine/ — the executable spec of the
+ * session engine (ADR 0007, heir to ADR 0002's fixtures-as-spec rule).
  */
 
 interface EventStep {

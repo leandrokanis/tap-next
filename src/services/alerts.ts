@@ -1,16 +1,12 @@
 import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
-import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
 
 /**
  * Session signals (RF-18): every moment of the session has its own sound —
  * entry countdown, exercise start, isometry end, rest start, rest end
  * (preparation opens) and session done — so the user recognizes what
- * happened without looking at the screen. Sound + haptic in the foreground,
- * a local notification scheduled for the exact phase boundary when
- * backgrounded. Every call is failure-tolerant — a broken speaker must
- * never break the session. expo-notifications has no web support, so it is
- * loaded lazily and only on native.
+ * happened without looking at the screen. Web Audio via expo-audio plus
+ * `navigator.vibrate` where the device supports it (ADR 0007). Every call
+ * is failure-tolerant — a broken speaker must never break the session.
  */
 
 export type SessionEvent =
@@ -20,8 +16,6 @@ export type SessionEvent =
   | 'restStart'
   | 'restEnd'
   | 'sessionDone';
-
-type NotificationsModule = typeof import('expo-notifications');
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const SOUND_SOURCES: Record<SessionEvent, number> = {
@@ -34,42 +28,17 @@ const SOUND_SOURCES: Record<SessionEvent, number> = {
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-const HAPTICS: Record<SessionEvent, () => Promise<unknown>> = {
-  countdownTick: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-  exerciseStart: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
-  isoEnd: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
-  restStart: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
-  restEnd: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
-  sessionDone: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+/** Vibration patterns (ms) per event, used where `navigator.vibrate` exists. */
+const VIBRATIONS: Record<SessionEvent, number | number[]> = {
+  countdownTick: 40,
+  exerciseStart: [80, 40, 120],
+  isoEnd: [120, 60, 120],
+  restStart: 80,
+  restEnd: [80, 40, 80, 40, 160],
+  sessionDone: [120, 60, 120, 60, 240],
 };
 
 const players = new Map<SessionEvent, AudioPlayer>();
-
-function notifications(): NotificationsModule | null {
-  if (Platform.OS === 'web') return null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('expo-notifications') as NotificationsModule;
-  } catch {
-    return null;
-  }
-}
-
-/** Foreground phase-end alerts come from in-app sound/haptics; scheduled
- * notifications must stay silent while the app is visible. */
-export function initNotifications(): void {
-  const module = notifications();
-  if (!module) return;
-  module.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: false,
-      shouldShowList: false,
-    }),
-  });
-  module.requestPermissionsAsync().catch(() => {});
-}
 
 export async function prepareAudio(): Promise<void> {
   try {
@@ -82,12 +51,14 @@ export async function prepareAudio(): Promise<void> {
   }
 }
 
-/** Plays the event's sound + haptic (RF-18). */
+/** Plays the event's sound + vibration (RF-18). */
 export function signalEvent(event: SessionEvent): void {
   try {
-    HAPTICS[event]().catch(() => {});
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(VIBRATIONS[event]);
+    }
   } catch {
-    // haptics unavailable
+    // vibration unavailable
   }
   try {
     const player = players.get(event);
@@ -97,34 +68,5 @@ export function signalEvent(event: SessionEvent): void {
     }
   } catch {
     // audio unavailable
-  }
-}
-
-export async function schedulePhaseEndNotification(
-  secondsFromNow: number,
-  title: string,
-  body: string,
-): Promise<string | null> {
-  const module = notifications();
-  if (!module || secondsFromNow < 1) return null;
-  try {
-    return await module.scheduleNotificationAsync({
-      content: { title, body, sound: true },
-      trigger: {
-        type: module.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: Math.ceil(secondsFromNow),
-        repeats: false,
-      },
-    });
-  } catch {
-    return null;
-  }
-}
-
-export async function cancelScheduledNotifications(): Promise<void> {
-  try {
-    await notifications()?.cancelAllScheduledNotificationsAsync();
-  } catch {
-    // nothing scheduled
   }
 }

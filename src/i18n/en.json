@@ -51,7 +51,8 @@
     "errorsFound_one": "{{count}} error found",
     "errorsFound_other": "{{count}} errors found",
     "lineCol": "Line {{line}}, column {{col}}",
-    "success": "\"{{name}}\" imported."
+    "success": "\"{{name}}\" imported.",
+    "manualPaste": "Tap here and paste (long-press → Paste)"
   },
   "validation": {
     "required": "required",
@@ -107,12 +108,6 @@
     "kgTotal": "Kg total",
     "adjustedNote": "Adjustments made during preparation in blue",
     "conclude": "Done",
-    "completedTitle": "Workout complete!",
-    "completedBody": "{{sets}} sets in {{minutes}} min.",
-    "restOverTitle": "Rest over",
-    "restOverBody": "Back to: {{label}}",
-    "phaseOverTitle": "Time!",
-    "ok": "OK",
     "preparation": "Preparation",
     "execution": "Execution",
     "whenReady": "When you're ready",

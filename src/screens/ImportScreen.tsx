@@ -2,10 +2,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Clipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { listWorkouts, saveWorkout } from '../data/workoutRepository';
-import { pushWorkoutsToWatch } from '../data/watchSync';
+import { saveWorkout } from '../data/workoutRepository';
 import { JsonPosition, locateJsonPath, parseWorkout, ValidationError } from '../domain/workout';
 import { RootStackParamList } from '../navigation/types';
 import { BigCTA, Card, MonoLabel, RoundIconButton } from '../ui/components';
@@ -65,16 +64,33 @@ export default function ImportScreen({ navigation }: Props) {
     setWorkout(result);
   };
 
+  // A leitura programática do clipboard só existe em contexto seguro
+  // (HTTPS); sem ela, abre um campo que captura o Colar manual do usuário —
+  // segue paste-only: o campo não edita, só recebe.
+  const [manualPaste, setManualPaste] = useState(false);
   const handlePaste = async () => {
-    const clip = await Clipboard.getStringAsync();
-    if (clip.trim() !== '') setContent(clip);
+    try {
+      const clip = await Clipboard.getStringAsync();
+      if (clip.trim() !== '') {
+        setContent(clip);
+        setManualPaste(false);
+        return;
+      }
+    } catch {
+      // API indisponível — cai no campo manual
+    }
+    setManualPaste(true);
+  };
+
+  const handleManualPaste = (value: string) => {
+    if (value.trim() === '') return;
+    setManualPaste(false);
+    setContent(value);
   };
 
   const handleImport = async () => {
     if (!workout || !workout.ok) return;
     await saveWorkout(workout.workout);
-    const all = await listWorkouts();
-    pushWorkoutsToWatch(all.map((w) => w.workout));
     showAlert(t('import.success', { name: workout.workout.name }));
     navigation.goBack();
   };
@@ -97,6 +113,19 @@ export default function ImportScreen({ navigation }: Props) {
       </View>
 
       <Text style={styles.hint}>{t('import.hint')}</Text>
+
+      {manualPaste ? (
+        <TextInput
+          autoFocus
+          multiline
+          value=""
+          onChangeText={handleManualPaste}
+          placeholder={t('import.manualPaste')}
+          placeholderTextColor={colors.textDim}
+          style={styles.manualPaste}
+          testID="manual-paste"
+        />
+      ) : null}
 
       <Card style={styles.preview} testID="import-input">
         {empty ? (
@@ -257,6 +286,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 13,
     color: colors.text,
+  },
+  manualPaste: {
+    minHeight: 52,
+    maxHeight: 52,
+    borderWidth: 1,
+    borderColor: colors.accentSoftBorder,
+    borderRadius: 14,
+    backgroundColor: colors.card,
+    color: colors.text,
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 12,
   },
   sampleLink: {
     alignSelf: 'center',

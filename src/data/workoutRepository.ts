@@ -1,7 +1,6 @@
-import * as Crypto from 'expo-crypto';
 
 import { Workout } from '../domain/workout';
-import { getDatabase } from './database';
+import { readJson, writeJson } from './webStorage';
 
 export interface StoredWorkout {
   id: string;
@@ -9,52 +8,29 @@ export interface StoredWorkout {
   createdAt: string;
 }
 
-interface WorkoutRow {
-  id: string;
-  json: string;
-  created_at: string;
-}
+const KEY = 'tapnext.workouts';
 
 export async function saveWorkout(workout: Workout): Promise<StoredWorkout> {
-  const db = await getDatabase();
   const stored: StoredWorkout = {
-    id: Crypto.randomUUID(),
+    id: globalThis.crypto.randomUUID(),
     workout,
     createdAt: new Date().toISOString(),
   };
-  await db.runAsync(
-    'INSERT INTO workouts (id, name, json, created_at) VALUES (?, ?, ?, ?)',
-    stored.id,
-    workout.name,
-    JSON.stringify(workout),
-    stored.createdAt,
-  );
+  writeJson(KEY, [...readJson<StoredWorkout[]>(KEY, []), stored]);
   return stored;
 }
 
 export async function listWorkouts(): Promise<StoredWorkout[]> {
-  const db = await getDatabase();
-  const rows = await db.getAllAsync<WorkoutRow>(
-    'SELECT id, json, created_at FROM workouts ORDER BY created_at ASC',
-  );
-  return rows.map((row) => ({
-    id: row.id,
-    workout: JSON.parse(row.json) as Workout,
-    createdAt: row.created_at,
-  }));
+  return readJson<StoredWorkout[]>(KEY, []);
 }
 
 export async function getWorkout(id: string): Promise<StoredWorkout | null> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<WorkoutRow>(
-    'SELECT id, json, created_at FROM workouts WHERE id = ?',
-    id,
-  );
-  if (!row) return null;
-  return { id: row.id, workout: JSON.parse(row.json) as Workout, createdAt: row.created_at };
+  return readJson<StoredWorkout[]>(KEY, []).find((w) => w.id === id) ?? null;
 }
 
 export async function deleteWorkout(id: string): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync('DELETE FROM workouts WHERE id = ?', id);
+  writeJson(
+    KEY,
+    readJson<StoredWorkout[]>(KEY, []).filter((w) => w.id !== id),
+  );
 }

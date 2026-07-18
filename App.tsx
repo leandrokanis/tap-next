@@ -18,9 +18,6 @@ import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 
-import { insertSession } from './src/data/sessionRepository';
-import { subscribeToWatchSessions, pushWorkoutsToWatch } from './src/data/watchSync';
-import { listWorkouts } from './src/data/workoutRepository';
 import { RootStackParamList } from './src/navigation/types';
 import HistoryDetailScreen from './src/screens/HistoryDetailScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
@@ -29,7 +26,8 @@ import ImportScreen from './src/screens/ImportScreen';
 import SessionScreen from './src/screens/SessionScreen';
 import WorkoutDetailScreen from './src/screens/WorkoutDetailScreen';
 import { SessionProvider } from './src/session/SessionProvider';
-import { initNotifications, prepareAudio } from './src/services/alerts';
+import { prepareAudio } from './src/services/alerts';
+import { setupPwa } from './src/services/pwa';
 import { colors } from './src/ui/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -60,16 +58,7 @@ export default function App() {
 
   useEffect(() => {
     prepareAudio();
-    initNotifications();
-    // Watch → iPhone: sessions arrive whenever the devices reconnect
-    // (idempotent insert, ADR 0005). iPhone → Watch: seed current workouts.
-    const unsubscribe = subscribeToWatchSessions((session) => {
-      insertSession(session).catch(() => {});
-    });
-    listWorkouts()
-      .then((all) => pushWorkoutsToWatch(all.map((w) => w.workout)))
-      .catch(() => {});
-    return unsubscribe;
+    setupPwa();
   }, []);
 
   if (!fontsLoaded) return null;
