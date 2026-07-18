@@ -2103,15 +2103,15 @@ DEPENDENCIES:
   - ExpoClipboard (from `../node_modules/expo-clipboard/ios`)
   - ExpoCrypto (from `../node_modules/expo-crypto/ios`)
   - "ExpoDomWebView (from `../node_modules/@expo/dom-webview/ios`)"
-  - ExpoFileSystem (from `../node_modules/expo/node_modules/expo-file-system/ios/ExpoFileSystem.podspec`)
-  - ExpoFont (from `../node_modules/expo-font/ios/ExpoFont.podspec`)
+  - ExpoFileSystem (from `../node_modules/expo/node_modules/expo-file-system/ios`)
+  - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
   - ExpoKeepAwake (from `../node_modules/expo/node_modules/expo-keep-awake/ios`)
   - ExpoLocalization (from `../node_modules/expo-localization/ios`)
   - "ExpoLogBox (from `../node_modules/@expo/log-box`)"
-  - ExpoModulesCore (from `../node_modules/expo-modules-core/ExpoModulesCore.podspec`)
+  - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../node_modules/expo-modules-jsi/apple`)
-  - ExpoModulesWorklets (from `../node_modules/expo-modules-core/ExpoModulesWorklets.podspec`)
+  - ExpoModulesWorklets (from `../node_modules/expo-modules-core`)
   - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoSQLite (from `../node_modules/expo-sqlite/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
@@ -2213,9 +2213,9 @@ EXTERNAL SOURCES:
   ExpoDomWebView:
     :path: "../node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
-    :podspec: "../node_modules/expo/node_modules/expo-file-system/ios/ExpoFileSystem.podspec"
+    :path: "../node_modules/expo/node_modules/expo-file-system/ios"
   ExpoFont:
-    :podspec: "../node_modules/expo-font/ios/ExpoFont.podspec"
+    :path: "../node_modules/expo-font/ios"
   ExpoHaptics:
     :path: "../node_modules/expo-haptics/ios"
   ExpoKeepAwake:
@@ -2225,11 +2225,11 @@ EXTERNAL SOURCES:
   ExpoLogBox:
     :path: "../node_modules/@expo/log-box"
   ExpoModulesCore:
-    :podspec: "../node_modules/expo-modules-core/ExpoModulesCore.podspec"
+    :path: "../node_modules/expo-modules-core"
   ExpoModulesJSI:
     :path: "../node_modules/expo-modules-jsi/apple"
   ExpoModulesWorklets:
-    :podspec: "../node_modules/expo-modules-core/ExpoModulesWorklets.podspec"
+    :path: "../node_modules/expo-modules-core"
   ExpoNotifications:
     :path: "../node_modules/expo-notifications/ios"
   ExpoSQLite:
@@ -2409,7 +2409,7 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: 8a96e2075b75641001f55393d7e6600a5b808f09
   ExpoLocalization: 543cb852ec9d4a6c732344f94ebd96d18897eaab
   ExpoLogBox: b39a76aab749833d58111c3be1264bb90f3b92d4
-  ExpoModulesCore: 87e72e2fbab7f671c8ff70871d0cc6577aa01c18
+  ExpoModulesCore: 747a01dfe7af61ad2e869f80bf983af1caa63378
   ExpoModulesJSI: ef7f197a8e7eeb245557f560ade794bfc1abdc79
   ExpoModulesWorklets: 0340ed9a30017f8597b90a1ef9aa210c43e44c4b
   ExpoNotifications: 02cd9efc076d8a4a64d36eee3297c9d84bb7e719
