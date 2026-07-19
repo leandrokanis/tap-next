@@ -18,9 +18,38 @@ Configuração única no GitHub (Settings → Secrets and variables → Actions)
 
 ## 2. CasaOS (kasparov)
 
-App Store → **Custom Install** → aba **Import** → cole o
-[`docker-compose.yml`](../docker-compose.yml) da raiz do repo (já traz as
-anotações `x-casaos`: nome, ícone, porta 8090). Ou preencha manualmente:
+App Store → **Custom Install** → aba **Import** → cole o compose abaixo
+(o `docker-compose.yml` do repo é o de build local; no kasparov usa-se a
+imagem publicada):
+
+```yaml
+name: tap-next
+services:
+  tap-next:
+    image: leandrokanis/tap-next:latest
+    container_name: tap-next
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    x-casaos:
+      title:
+        en_us: Tap Next
+      icon: https://raw.githubusercontent.com/leandrokanis/tap-next/main/public/icon-192.png
+      port_map: "8090"
+      scheme: http
+x-casaos:
+  main: tap-next
+  title:
+    en_us: Tap Next
+  description:
+    en_us: Workout companion — installable offline-first PWA
+  icon: https://raw.githubusercontent.com/leandrokanis/tap-next/main/public/icon-192.png
+  category: Health
+  port_map: "8090"
+  scheme: http
+```
+
+Ou preencha manualmente:
 
 | Campo | Valor |
 |---|---|
