@@ -1,0 +1,32 @@
+name: tap-next
+
+services:
+  tap-next:
+    image: leandrokanis/tap-next:latest
+    container_name: tap-next
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    # Container imutável — sem volumes nem env; os dados do usuário vivem no
+    # browser (localStorage) e saem pelo export JSON.
+    x-casaos:
+      title:
+        en_us: Tap Next
+      description:
+        en_us: Workout companion — installable offline-first PWA
+      icon: https://raw.githubusercontent.com/leandrokanis/tap-next/main/public/icon-192.png
+      port_map: "8090"
+      scheme: http
+
+x-casaos:
+  main: tap-next
+  title:
+    en_us: Tap Next
+  description:
+    en_us: Workout companion — installable offline-first PWA
+  icon: https://raw.githubusercontent.com/leandrokanis/tap-next/main/public/icon-192.png
+  tagline:
+    en_us: One tap to the next set
+  category: Health
+  port_map: "8090"
+  scheme: http

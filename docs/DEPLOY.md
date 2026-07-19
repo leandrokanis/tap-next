@@ -18,11 +18,13 @@ Configuração única no GitHub (Settings → Secrets and variables → Actions)
 
 ## 2. CasaOS (kasparov)
 
-App Store → **Custom Install**:
+App Store → **Custom Install** → aba **Import** → cole o
+[`docker-compose.yml`](../docker-compose.yml) da raiz do repo (já traz as
+anotações `x-casaos`: nome, ícone, porta 8090). Ou preencha manualmente:
 
 | Campo | Valor |
 |---|---|
-| Image | `SEU_USUARIO/tap-next:latest` |
+| Image | `leandrokanis/tap-next:latest` |
 | Porta | host `8090` → container `80` (TCP) |
 | Restart | `unless-stopped` |
 
